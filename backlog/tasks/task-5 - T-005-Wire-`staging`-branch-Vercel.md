@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-17 08:56'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-1
@@ -13,7 +13,7 @@ labels:
 dependencies: []
 references:
   - .docs/backlog.md
-ordinal: 5000
+ordinal: 6000
 ---
 
 ## Description

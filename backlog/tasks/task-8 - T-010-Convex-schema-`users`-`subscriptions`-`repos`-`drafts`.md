@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 09:16'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-2
@@ -18,7 +18,7 @@ modified_files:
   - convex/tsconfig.json
   - convex/_generated/dataModel.d.ts
   - tests/schema-contract.test.mjs
-ordinal: 9000
+ordinal: 10000
 ---
 
 ## Description

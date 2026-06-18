@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 14:57'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-2
@@ -23,7 +23,7 @@ modified_files:
   - convex/_generated/server.d.ts
   - tests/github-wiring.test.mjs
   - tests/schema-contract.test.mjs
-ordinal: 11000
+ordinal: 12000
 ---
 
 ## Description

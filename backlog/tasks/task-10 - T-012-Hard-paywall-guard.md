@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 11:06'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-2
@@ -20,7 +20,7 @@ modified_files:
   - tests/auth-wiring.test.mjs
   - tests/billing-wiring.test.mjs
   - tests/schema-contract.test.mjs
-ordinal: 10000
+ordinal: 11000
 ---
 
 ## Description

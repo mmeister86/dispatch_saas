@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 08:25'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-1
@@ -17,7 +17,7 @@ documentation:
   - .docs/T-006-positioning-landing-copy.md
 modified_files:
   - .docs/T-006-positioning-landing-copy.md
-ordinal: 7000
+ordinal: 8000
 ---
 
 ## Description

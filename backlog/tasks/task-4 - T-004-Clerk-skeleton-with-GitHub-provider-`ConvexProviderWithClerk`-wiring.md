@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 09:14'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-1
@@ -24,7 +24,7 @@ modified_files:
   - package.json
   - convex/_generated/api.d.ts
   - convex/_generated/api.js
-ordinal: 4000
+ordinal: 5000
 ---
 
 ## Description

@@ -4,7 +4,7 @@ title: 'T-003: Init + connect Convex (cloud)'
 status: Done
 assignee: []
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-17 07:41'
+updated_date: '2026-06-18 15:54'
 labels:
   - imported-from-docs
   - phase-1
@@ -12,7 +12,7 @@ labels:
 dependencies: []
 references:
   - .docs/backlog.md
-ordinal: 3000
+ordinal: 4000
 ---
 
 ## Description
