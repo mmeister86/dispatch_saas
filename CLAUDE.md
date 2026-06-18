@@ -83,9 +83,9 @@ Use a specialist, not a generic agent. Only pull in what the current task needs.
 - **Secrets:** X tokens and all keys live server-side / in Convex env. No secrets in client code, ever.
 
 **Branch & deploy strategy:**
-- `main` — integration branch, tested locally only, **never directly deployed.**
-- `feat/*` — one per task/agent, short-lived, merged to `main` via PR after review.
-- `staging` — the **only** Vercel-deployed branch. Never commit to it directly; update it exclusively via `git push origin main:staging` after local testing on `main` confirms green.
+- `main` — production branch. Merges to `main` are the only path to a Vercel Production deployment.
+- `staging` — development/preview branch for integration checks before production. Use Vercel Preview environment variables here.
+- `feat/*` — one per task/agent, short-lived, merged to `staging` for preview/dev validation, then promoted to `main` after review and local checks.
 
 No dependency or service beyond this stack without a one-line justification in the task.
 

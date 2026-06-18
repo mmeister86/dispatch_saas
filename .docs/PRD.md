@@ -72,7 +72,7 @@ The entire product is this one flow:
 
 ## 6. Definition of Shipped (binary)
 
-- Deployed on Vercel (via `staging` branch).
+- Deployed on Vercel from `main` as the Production branch.
 - Core action works end-to-end: pay → connect GitHub + X → push commit → generated variants appear → 1-click post lands on X.
 - The lovable moment survives review (variants are genuinely post-worthy, not changelog noise).
 - Payment is taken via **Lemon Squeezy** as a **subscription, hard paywall, no free plan**.
@@ -161,12 +161,12 @@ A small client-side widget with 3–4 *canned* real commit→tweet pairs. Visito
 
 ## 11. Plan (90h budget — hours, not calendar days)
 
-- **Sessions 1–3 (~9h):** Lock scope + positioning + landing copy on paper. Repo, stack, `agents.md`, `backlog.md`, Convex + Clerk skeleton, new free Resend Team + domain, staging deploy wired.
+- **Sessions 1–3 (~9h):** Lock scope + positioning + landing copy on paper. Repo, stack, `agents.md`, `backlog.md`, Convex + Clerk skeleton, new free Resend Team + domain, Vercel deploy wired (`main` = production, `staging` = development/preview).
 - **Sessions 4–18 (~45h):** Core action end-to-end — paywall, GitHub webhook, generation engine, X OAuth + post, post cap, inbox + review. Test-driven, parallel subagents on independent tasks. Nothing else.
 - **⛔ FEATURE FREEZE at ~60h (~session 20).** From here: bugs, landing, proof, legal, launch only.
 - **Sessions 19–24 (~18h):** Landing & polish — hero/demo/pricing/comparison/testimonials via shadcnblocks; polish the review flow until the lovable moment lands.
 - **Sessions 25–28 (~12h):** Proof, legal & analytics — 3–5 beta testimonials, Rybbit wired (funnel + success metric), Impressum + Datenschutz pages added, launch-blockers only.
-- **Sessions 29–30 (~6h):** Launch — `git push origin main:staging`, BIP launch post, payments on, watch the metric in Rybbit against the kill criteria, make the pre-decided call on the review date.
+- **Sessions 29–30 (~6h):** Launch — merge tested work into `main`, let Vercel deploy Production from `main`, publish the BIP launch post, payments on, watch the metric in Rybbit against the kill criteria, make the pre-decided call on the review date.
 
 ---
 
