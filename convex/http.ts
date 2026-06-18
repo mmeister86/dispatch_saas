@@ -5,6 +5,7 @@ import { env, httpAction, internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
+const MAX_CONNECTED_REPOS_PER_PUSH = 100;
 
 http.route({
   path: "/github/webhook",
@@ -23,7 +24,38 @@ http.route({
       return new Response("OK", { status: 200 });
     }
 
-    // Push handling lands in TASK-12 / T-014.
+    if (eventName !== "push") {
+      return new Response("OK", { status: 200 });
+    }
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+
+    if (!isGitHubPushWebhookPayload(payload)) {
+      return new Response("Invalid JSON", { status: 400 });
+    }
+
+    if (isDeleteOrEmptyPush(payload)) {
+      return new Response("OK", { status: 200 });
+    }
+
+    const repoId = payload.repository.id;
+    const draftCommit = selectDraftCommit(payload);
+
+    if (draftCommit == null) {
+      return new Response("Invalid push payload", { status: 400 });
+    }
+
+    await ctx.runMutation(internal.http.createDraftFromGithubPushWebhook, {
+      githubRepoId: String(repoId),
+      commitSha: draftCommit.id,
+      commitMessage: draftCommit.message,
+    });
+
     return new Response("OK", { status: 200 });
   }),
 });
@@ -146,6 +178,47 @@ export const upsertSubscriptionFromWebhook = internalMutation({
       currentPeriodEnd: args.currentPeriodEnd,
       postsThisPeriod: 0,
     });
+    return null;
+  },
+});
+
+export const createDraftFromGithubPushWebhook = internalMutation({
+  args: {
+    githubRepoId: v.string(),
+    commitSha: v.string(),
+    commitMessage: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const repos = await ctx.db
+      .query("repos")
+      .withIndex("by_githubRepoId", (q) =>
+        q.eq("githubRepoId", args.githubRepoId),
+      )
+      .take(MAX_CONNECTED_REPOS_PER_PUSH);
+
+    for (const repo of repos) {
+      const existingDraft = await ctx.db
+        .query("drafts")
+        .withIndex("by_repoId_and_commitSha", (q) =>
+          q.eq("repoId", repo._id).eq("commitSha", args.commitSha),
+        )
+        .take(1);
+
+      if (existingDraft.length > 0) {
+        continue;
+      }
+
+      await ctx.db.insert("drafts", {
+        userId: repo.userId,
+        repoId: repo._id,
+        commitSha: args.commitSha,
+        commitMessage: args.commitMessage,
+        variants: [],
+        status: "draft",
+      });
+    }
+
     return null;
   },
 });
@@ -278,5 +351,127 @@ type LemonSubscriptionAttributes = {
   renews_at?: unknown;
   ends_at?: unknown;
 };
+
+type GitHubPushWebhookPayload = {
+  repository: {
+    id: string | number;
+  };
+  after?: string;
+  deleted?: boolean;
+  size?: number;
+  commits?: GitHubPushCommit[];
+  head_commit?: GitHubPushCommit | null;
+};
+
+type GitHubPushCommit = {
+  id?: string;
+  message?: string;
+};
+
+function isDeleteOrEmptyPush(payload: GitHubPushWebhookPayload) {
+  return (
+    payload.deleted === true ||
+    payload.size === 0 ||
+    (Array.isArray(payload.commits) && payload.commits.length === 0)
+  );
+}
+
+function isGitHubPushWebhookPayload(
+  value: unknown,
+): value is GitHubPushWebhookPayload {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (!isGitHubRepository(value.repository)) {
+    return false;
+  }
+
+  if (value.after != null && typeof value.after !== "string") {
+    return false;
+  }
+
+  if (value.deleted != null && typeof value.deleted !== "boolean") {
+    return false;
+  }
+
+  if (value.size != null && typeof value.size !== "number") {
+    return false;
+  }
+
+  if (value.head_commit != null && !isGitHubPushCommit(value.head_commit)) {
+    return false;
+  }
+
+  if (value.commits != null) {
+    if (!Array.isArray(value.commits)) {
+      return false;
+    }
+
+    for (const commit of value.commits) {
+      if (!isGitHubPushCommit(commit)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+type GitHubPushDraftCommit = {
+  id: string;
+  message: string;
+};
+
+function selectDraftCommit(
+  payload: GitHubPushWebhookPayload,
+): GitHubPushDraftCommit | null {
+  if (isValidPushCommit(payload.head_commit)) {
+    return payload.head_commit;
+  }
+
+  const after = payload.after;
+  if (typeof after !== "string" || !Array.isArray(payload.commits)) {
+    return null;
+  }
+
+  const commit = payload.commits.find((commit) => commit.id === after) ?? null;
+  if (!isValidPushCommit(commit)) {
+    return null;
+  }
+
+  return commit;
+}
+
+function isValidPushCommit(
+  commit: GitHubPushCommit | null | undefined,
+): commit is GitHubPushDraftCommit {
+  return (
+    !!commit &&
+    typeof commit.id === "string" &&
+    typeof commit.message === "string"
+  );
+}
+
+function isGitHubPushCommit(value: unknown): value is GitHubPushCommit {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.message === "string"
+  );
+}
+
+function isGitHubRepository(
+  value: unknown,
+): value is GitHubPushWebhookPayload["repository"] {
+  return (
+    isRecord(value) &&
+    (typeof value.id === "string" || typeof value.id === "number")
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export default http;
