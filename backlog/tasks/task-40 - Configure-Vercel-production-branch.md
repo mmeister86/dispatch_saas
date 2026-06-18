@@ -1,17 +1,17 @@
 ---
 id: TASK-40
 title: Document Vercel branch strategy
-status: In Progress
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 12:27'
-updated_date: '2026-06-17 12:39'
+updated_date: '2026-06-18 06:49'
 labels:
   - infra
   - vercel
 dependencies: []
 priority: medium
-ordinal: 40000
+ordinal: 7000
 ---
 
 ## Description
