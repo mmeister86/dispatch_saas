@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as billing from "../billing.js";
 import type * as email from "../email.js";
+import type * as http from "../http.js";
 import type * as viewer from "../viewer.js";
 
 import type {
@@ -18,7 +20,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  billing: typeof billing;
   email: typeof email;
+  http: typeof http;
   viewer: typeof viewer;
 }>;
 

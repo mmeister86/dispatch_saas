@@ -6,7 +6,8 @@ import {
   UserButton,
   useUser,
 } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
+import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 
 export default function Home() {
@@ -50,6 +51,21 @@ export default function Home() {
 function ViewerStatus() {
   const { user } = useUser();
   const viewer = useQuery(api.viewer.current);
+  const createCheckout = useAction(api.billing.createCheckout);
+  const [checkoutPlan, setCheckoutPlan] = useState<"good" | "better" | null>(
+    null,
+  );
+
+  async function handleCheckout(plan: "good" | "better") {
+    setCheckoutPlan(plan);
+
+    try {
+      const checkout = await createCheckout({ plan });
+      window.location.assign(checkout.url);
+    } finally {
+      setCheckoutPlan(null);
+    }
+  }
 
   return (
     <div className="grid gap-5">
@@ -86,6 +102,28 @@ function ViewerStatus() {
             </p>
           </div>
         )}
+      </div>
+
+      <div className="border border-black/10 p-5">
+        <p className="text-sm font-medium text-zinc-500">Subscription</p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            className="h-11 border border-black bg-black px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={checkoutPlan !== null}
+            onClick={() => void handleCheckout("good")}
+            type="button"
+          >
+            {checkoutPlan === "good" ? "Opening..." : "Good - EUR 9/mo"}
+          </button>
+          <button
+            className="h-11 border border-black/20 bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={checkoutPlan !== null}
+            onClick={() => void handleCheckout("better")}
+            type="button"
+          >
+            {checkoutPlan === "better" ? "Opening..." : "Better - EUR 19/mo"}
+          </button>
+        </div>
       </div>
     </div>
   );
