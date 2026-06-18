@@ -209,13 +209,18 @@ export const createDraftFromGithubPushWebhook = internalMutation({
         continue;
       }
 
-      await ctx.db.insert("drafts", {
+      const draftId = await ctx.db.insert("drafts", {
         userId: repo.userId,
         repoId: repo._id,
         commitSha: args.commitSha,
         commitMessage: args.commitMessage,
         variants: [],
         status: "draft",
+      });
+
+      await ctx.scheduler.runAfter(0, internal.generation.populateDraftVariants, {
+        draftId: draftId,
+        commitMessage: args.commitMessage,
       });
     }
 

@@ -119,7 +119,7 @@ test("Convex HTTP exposes a signed GitHub webhook endpoint for ping only", async
   assert.match(source, /ctx\.runMutation\(internal\.http\.createDraftFromGithubPushWebhook/);
 });
 
-test("GitHub push webhooks create exactly one draft from the validated raw JSON body", async () => {
+test("GitHub push webhooks create exactly one draft from the validated raw JSON body and schedule variant generation", async () => {
   const source = await read("convex/http.ts");
   const draftMutationSource = source.slice(
     source.indexOf("export const createDraftFromGithubPushWebhook"),
@@ -146,8 +146,25 @@ test("GitHub push webhooks create exactly one draft from the validated raw JSON 
   assert.match(source, /payload\.commits\.find\(\(commit\) => commit\.id === after\)/);
   assert.match(source, /status:\s*"draft"/);
   assert.match(source, /variants:\s*\[\]/);
+  assert.match(source, /ctx\.scheduler\.runAfter\(0,\s*internal\.generation\.populateDraftVariants/);
+  assert.match(source, /draftId:\s*draftId/);
+  assert.match(source, /commitMessage:\s*args\.commitMessage/);
   assert.match(source, /return new Response\("OK", \{ status: 200 \}\)/);
   assert.match(source, /isDeleteOrEmptyPush\(payload\)/);
+
+  const existingDraftCheckIndex = draftMutationSource.indexOf(
+    "if (existingDraft.length > 0)",
+  );
+  const insertIndex = draftMutationSource.indexOf(
+    'const draftId = await ctx.db.insert("drafts"',
+  );
+  const schedulerIndex = draftMutationSource.indexOf(
+    "ctx.scheduler.runAfter(0, internal.generation.populateDraftVariants",
+  );
+
+  assert.ok(existingDraftCheckIndex > -1);
+  assert.ok(insertIndex > existingDraftCheckIndex);
+  assert.ok(schedulerIndex > insertIndex);
 });
 
 test("subscriber workspace exposes the repo connection flow", async () => {

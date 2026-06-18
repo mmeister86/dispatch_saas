@@ -166,3 +166,21 @@ test("generation action stays internal and never reads local agent files at runt
   assert.match(generationSource, /env\.OPENAI_API_KEY/);
   assert.match(generationSource, /env\.AI_MODEL/);
 });
+
+test("draft variant population stays internal and patches only generated variants", async () => {
+  const generationSource = await read("convex/generation.ts");
+
+  assert.match(generationSource, /import \{ internal \} from "\.\/_generated\/api"/);
+  assert.match(generationSource, /export const populateDraftVariants = internalAction\(/);
+  assert.match(generationSource, /draftId:\s*v\.id\("drafts"\)/);
+  assert.match(generationSource, /commitMessage:\s*v\.string\(\)/);
+  assert.match(generationSource, /generateVariantsForCommitMessage\(args\.commitMessage\)/);
+  assert.match(
+    generationSource,
+    /ctx\.runMutation\(internal\.generation\.updateDraftVariants/,
+  );
+  assert.match(generationSource, /export const updateDraftVariants = internalMutation\(/);
+  assert.match(generationSource, /variants:\s*v\.array\(v\.string\(\)\)/);
+  assert.match(generationSource, /ctx\.db\.patch\(args\.draftId,\s*\{\s*variants:\s*args\.variants,\s*\}\)/s);
+  assert.doesNotMatch(generationSource, /updateDraftVariants[\s\S]*status:\s*"draft"/);
+});
