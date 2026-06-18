@@ -25,6 +25,7 @@ import type { DataModel } from "./dataModel.js";
  * Typesafe environment variables declared in `convex.config.ts`.
  */
 type Env = {
+  readonly AI_MODEL: string;
   readonly APP_URL: string;
   readonly GITHUB_APP_ID: string;
   readonly GITHUB_APP_INSTALL_URL: string;
@@ -35,6 +36,7 @@ type Env = {
   readonly LEMONSQUEEZY_GOOD_VARIANT_ID: string;
   readonly LEMONSQUEEZY_STORE_ID: string;
   readonly LEMONSQUEEZY_WEBHOOK_SECRET: string;
+  readonly OPENAI_API_KEY: string;
 };
 
 /**

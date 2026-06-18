@@ -10,6 +10,8 @@
 
 import type * as billing from "../billing.js";
 import type * as email from "../email.js";
+import type * as generation from "../generation.js";
+import type * as generationCore from "../generationCore.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as viewer from "../viewer.js";
@@ -23,6 +25,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   billing: typeof billing;
   email: typeof email;
+  generation: typeof generation;
+  generationCore: typeof generationCore;
   github: typeof github;
   http: typeof http;
   viewer: typeof viewer;

@@ -14,6 +14,8 @@ const app = defineApp({
     GITHUB_APP_PRIVATE_KEY: v.string(),
     GITHUB_APP_INSTALL_URL: v.string(),
     GITHUB_WEBHOOK_SECRET: v.string(),
+    OPENAI_API_KEY: v.string(),
+    AI_MODEL: v.string(),
   },
 });
 app.use(resend);
