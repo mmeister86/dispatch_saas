@@ -1,9 +1,74 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { action, env, internalMutation } from "./_generated/server";
+import {
+  action,
+  env,
+  internalMutation,
+  internalQuery,
+  query,
+} from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 type Plan = "good" | "better";
+
+export const currentAccess = query({
+  args: {},
+  returns: v.union(
+    v.object({
+      state: v.literal("signedOut"),
+    }),
+    v.object({
+      state: v.literal("needsSubscription"),
+      email: v.optional(v.string()),
+    }),
+    v.object({
+      state: v.literal("active"),
+      email: v.optional(v.string()),
+      plan: v.union(v.literal("good"), v.literal("better")),
+      currentPeriodEnd: v.number(),
+      postsThisPeriod: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      return { state: "signedOut" as const };
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkTokenIdentifier", (q) =>
+        q.eq("clerkTokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (user === null) {
+      return {
+        state: "needsSubscription" as const,
+        ...(identity.email ? { email: identity.email } : {}),
+      };
+    }
+
+    const subscription = await getActiveSubscription(ctx, user._id);
+
+    if (!subscription) {
+      return {
+        state: "needsSubscription" as const,
+        email: user.email,
+      };
+    }
+
+    return {
+      state: "active" as const,
+      email: user.email,
+      plan: subscription.plan,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      postsThisPeriod: subscription.postsThisPeriod,
+    };
+  },
+});
 
 export const createCheckout = action({
   args: {
@@ -28,6 +93,15 @@ export const createCheckout = action({
         email: identity.email,
       },
     );
+    const hasActiveSubscription: boolean = await ctx.runQuery(
+      internal.billing.hasActiveSubscriptionForUser,
+      { userId },
+    );
+
+    if (hasActiveSubscription) {
+      throw new Error("This account already has an active Dispatch subscription.");
+    }
+
     const variantId = getVariantId(args.plan);
     const checkout = await createLemonCheckout({
       plan: args.plan,
@@ -37,6 +111,16 @@ export const createCheckout = action({
     });
 
     return { url: checkout.url };
+  },
+});
+
+export const hasActiveSubscriptionForUser = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    return (await getActiveSubscription(ctx, args.userId)) !== null;
   },
 });
 
@@ -68,6 +152,21 @@ export const ensureCheckoutUser = internalMutation({
     });
   },
 });
+
+async function getActiveSubscription(ctx: QueryCtx, userId: Id<"users">) {
+  const now = Date.now();
+  const activeSubscriptions = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_userId_and_status_and_currentPeriodEnd", (q) =>
+      q
+        .eq("userId", userId)
+        .eq("status", "active")
+        .gt("currentPeriodEnd", now),
+    )
+    .take(1);
+
+  return activeSubscriptions[0] ?? null;
+}
 
 function getVariantId(plan: Plan) {
   return plan === "good"
