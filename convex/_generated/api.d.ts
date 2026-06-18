@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as email from "../email.js";
 import type * as viewer from "../viewer.js";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  email: typeof email;
   viewer: typeof viewer;
 }>;
 
@@ -46,4 +48,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+};
