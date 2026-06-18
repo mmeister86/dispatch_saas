@@ -50,5 +50,5 @@ test("Home page exposes signed-in and signed-out auth states", async () => {
   assert.match(source, /signed-out/);
   assert.match(source, /SignInButton/);
   assert.match(source, /UserButton/);
-  assert.match(source, /api\.viewer\.current/);
+  assert.match(source, /api\.billing\.currentAccess/);
 });

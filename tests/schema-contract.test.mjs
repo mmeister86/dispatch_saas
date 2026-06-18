@@ -68,6 +68,7 @@ test("schema defines the indexes needed by upcoming core tasks", async () => {
     "by_githubId",
     "by_xUserId",
     "by_userId",
+    "by_userId_and_status_and_currentPeriodEnd",
     "by_lemonCustomerId",
     "by_lemonSubscriptionId",
     "by_status",

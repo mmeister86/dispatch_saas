@@ -30,6 +30,11 @@ export default defineSchema({
     postsThisPeriod: v.number(),
   })
     .index("by_userId", ["userId"])
+    .index("by_userId_and_status_and_currentPeriodEnd", [
+      "userId",
+      "status",
+      "currentPeriodEnd",
+    ])
     .index("by_lemonCustomerId", ["lemonCustomerId"])
     .index("by_lemonSubscriptionId", ["lemonSubscriptionId"])
     .index("by_status", ["status"]),

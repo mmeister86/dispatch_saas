@@ -34,17 +34,23 @@ test("Convex app declares Lemon Squeezy environment variables", async () => {
 
 test("checkout creation derives the user server-side and embeds Lemon custom data", async () => {
   const source = await read("convex/billing.ts");
+  const createCheckoutSource = source.slice(
+    source.indexOf("export const createCheckout"),
+    source.indexOf("export const hasActiveSubscriptionForUser"),
+  );
 
   assert.match(source, /export const createCheckout = action\(\{/);
   assert.match(source, /plan:\s*v\.union\(\s*v\.literal\("good"\),\s*v\.literal\("better"\)/s);
-  assert.match(source, /ctx\.auth\.getUserIdentity\(\)/);
-  assert.match(source, /identity\.tokenIdentifier/);
+  assert.match(createCheckoutSource, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(createCheckoutSource, /identity\.tokenIdentifier/);
   assert.match(source, /by_clerkTokenIdentifier/);
-  assert.doesNotMatch(source, /userId:\s*v\./);
+  assert.doesNotMatch(createCheckoutSource, /userId:\s*v\./);
   assert.match(source, /https:\/\/api\.lemonsqueezy\.com\/v1\/checkouts/);
   assert.match(source, /Authorization:\s*`Bearer \$\{env\.LEMONSQUEEZY_API_KEY\}`/);
   assert.match(source, /checkout_data/);
   assert.match(source, /custom:\s*\{[^}]*userId[^}]*plan/s);
+  assert.match(source, /internal\.billing\.hasActiveSubscriptionForUser/);
+  assert.match(source, /already has an active Dispatch subscription/);
   assert.doesNotMatch(source, /Number\(variantId\)/);
   assert.match(source, /await response\.text\(\)/);
   assert.match(source, /responseBody/);
@@ -97,4 +103,40 @@ test("home page exposes signed-in Good and Better checkout buttons", async () =>
   assert.match(source, /handleCheckout\("good"\)/);
   assert.match(source, /handleCheckout\("better"\)/);
   assert.match(source, /window\.location\.assign\(checkout\.url\)/);
+});
+
+test("billing exposes a server-derived current access guard", async () => {
+  const source = await read("convex/billing.ts");
+  const currentAccessSource = source.slice(
+    source.indexOf("export const currentAccess"),
+    source.indexOf("export const createCheckout"),
+  );
+
+  assert.match(currentAccessSource, /export const currentAccess = query\(\{/);
+  assert.match(currentAccessSource, /args:\s*\{\}/);
+  assert.doesNotMatch(currentAccessSource, /userId:\s*v\./);
+  assert.match(currentAccessSource, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(currentAccessSource, /identity\.tokenIdentifier/);
+  assert.match(source, /by_clerkTokenIdentifier/);
+  assert.match(source, /by_userId_and_status_and_currentPeriodEnd/);
+  assert.match(currentAccessSource, /getActiveSubscription\(ctx,\s*user\._id\)/);
+  assert.match(source, /\.eq\("userId",\s*userId\)/);
+  assert.match(source, /\.eq\("status",\s*"active"\)/);
+  assert.match(source, /\.gt\("currentPeriodEnd",\s*now\)/);
+  assert.match(source, /state:\s*"signedOut"/);
+  assert.match(source, /state:\s*"needsSubscription"/);
+  assert.match(source, /state:\s*"active"/);
+});
+
+test("home page gates the app by subscription access", async () => {
+  const source = await read("app/page.tsx");
+
+  assert.match(source, /useQuery\(api\.billing\.currentAccess\)/);
+  assert.match(source, /PaywallView/);
+  assert.match(source, /SubscriberApp/);
+  assert.match(source, /Start with Good/);
+  assert.match(source, /Start with Better/);
+  assert.match(source, /Connected and paid/);
+  assert.doesNotMatch(source, /api\.viewer\.current/);
+  assert.doesNotMatch(source, /Convex identity/);
 });

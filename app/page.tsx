@@ -12,13 +12,13 @@ import { api } from "@/convex/_generated/api";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-16 text-black">
+    <main className="flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-12 text-black">
       <section className="flex w-full max-w-2xl flex-col gap-8">
         <div className="flex items-center justify-between gap-4 border-b border-black/10 pb-5">
           <div>
             <p className="text-sm font-medium text-emerald-700">Dispatch</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              Clerk GitHub sign-in
+              Commit-to-post workspace
             </h1>
           </div>
           <Show when="signed-in">
@@ -29,8 +29,8 @@ export default function Home() {
         <Show when="signed-out">
           <div className="flex flex-col gap-5">
             <p className="text-lg leading-8 text-zinc-700">
-              Sign in with GitHub through Clerk to verify the authenticated
-              Convex session.
+              Sign in with GitHub to subscribe and unlock your Dispatch
+              workspace.
             </p>
             <SignInButton mode="modal">
               <button className="h-11 w-fit border border-black bg-black px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800">
@@ -41,16 +41,45 @@ export default function Home() {
         </Show>
 
         <Show when="signed-in">
-          <ViewerStatus />
+          <GuardedApp />
         </Show>
       </section>
     </main>
   );
 }
 
-function ViewerStatus() {
+function GuardedApp() {
   const { user } = useUser();
-  const viewer = useQuery(api.viewer.current);
+  const access = useQuery(api.billing.currentAccess);
+
+  if (access === undefined) {
+    return (
+      <div className="border border-black/10 p-5">
+        <p className="text-sm font-medium text-zinc-500">Subscription</p>
+        <p className="mt-2 text-lg font-semibold">Checking access...</p>
+      </div>
+    );
+  }
+
+  if (access.state !== "active") {
+    return (
+      <PaywallView
+        email={
+          access.state === "needsSubscription"
+            ? access.email ??
+              user?.primaryEmailAddress?.emailAddress ??
+              user?.fullName ??
+              "Signed in"
+            : "Signed in"
+        }
+      />
+    );
+  }
+
+  return <SubscriberApp access={access} />;
+}
+
+function PaywallView({ email }: { email: string }) {
   const createCheckout = useAction(api.billing.createCheckout);
   const [checkoutPlan, setCheckoutPlan] = useState<"good" | "better" | null>(
     null,
@@ -70,42 +99,19 @@ function ViewerStatus() {
   return (
     <div className="grid gap-5">
       <div className="border border-black/10 p-5">
-        <p className="text-sm font-medium text-zinc-500">Clerk session</p>
-        <p className="mt-2 text-lg font-semibold">
-          {user?.primaryEmailAddress?.emailAddress ??
-            user?.fullName ??
-            "Signed in"}
+        <p className="text-sm font-medium text-zinc-500">Signed in as</p>
+        <p className="mt-2 text-lg font-semibold">{email}</p>
+      </div>
+
+      <div className="border border-black/10 p-5">
+        <p className="text-sm font-medium text-zinc-500">Subscription needed</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-normal">
+          Choose a plan to enter Dispatch.
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-700">
+          Dispatch is pay-first so the commit-to-post flow can stay fast,
+          private, and protected from public abuse.
         </p>
-      </div>
-
-      <div className="border border-black/10 p-5">
-        <p className="text-sm font-medium text-zinc-500">Convex identity</p>
-        {viewer === undefined ? (
-          <p className="mt-2 text-lg font-semibold">Checking...</p>
-        ) : viewer === null ? (
-          <p className="mt-2 text-lg font-semibold text-red-700">
-            Not authenticated in Convex
-          </p>
-        ) : (
-          <div className="mt-3 grid gap-2 text-sm text-zinc-700">
-            <p>
-              <span className="font-medium text-black">Email:</span>{" "}
-              {viewer.email ?? "No email on token"}
-            </p>
-            <p>
-              <span className="font-medium text-black">Name:</span>{" "}
-              {viewer.name ?? "No name on token"}
-            </p>
-            <p className="break-all">
-              <span className="font-medium text-black">Token:</span>{" "}
-              {viewer.tokenIdentifier}
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="border border-black/10 p-5">
-        <p className="text-sm font-medium text-zinc-500">Subscription</p>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             className="h-11 border border-black bg-black px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -113,7 +119,7 @@ function ViewerStatus() {
             onClick={() => void handleCheckout("good")}
             type="button"
           >
-            {checkoutPlan === "good" ? "Opening..." : "Good - EUR 9/mo"}
+            {checkoutPlan === "good" ? "Opening..." : "Start with Good"}
           </button>
           <button
             className="h-11 border border-black/20 bg-white px-5 text-sm font-medium text-black transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -121,10 +127,57 @@ function ViewerStatus() {
             onClick={() => void handleCheckout("better")}
             type="button"
           >
-            {checkoutPlan === "better" ? "Opening..." : "Better - EUR 19/mo"}
+            {checkoutPlan === "better" ? "Opening..." : "Start with Better"}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SubscriberApp({
+  access,
+}: {
+  access: {
+    email?: string;
+    plan: "good" | "better";
+    currentPeriodEnd: number;
+    postsThisPeriod: number;
+  };
+}) {
+  return (
+    <div className="grid gap-5">
+      <div className="border border-emerald-200 bg-emerald-50 p-5">
+        <p className="text-sm font-medium text-emerald-700">
+          Connected and paid
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-normal">
+          Your Dispatch workspace is unlocked.
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-zinc-700">
+          Next up: connect your GitHub repo and X account in the upcoming core
+          flow tasks.
+        </p>
+      </div>
+
+      <dl className="grid gap-3 border border-black/10 p-5 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="font-medium text-zinc-500">Plan</dt>
+          <dd className="mt-1 capitalize">{access.plan}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-zinc-500">Posts used</dt>
+          <dd className="mt-1">{access.postsThisPeriod}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-zinc-500">Renews</dt>
+          <dd className="mt-1">
+            {new Intl.DateTimeFormat("en", {
+              dateStyle: "medium",
+            }).format(access.currentPeriodEnd)}
+          </dd>
+        </div>
+      </dl>
     </div>
   );
 }
