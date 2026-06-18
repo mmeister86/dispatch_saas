@@ -115,7 +115,39 @@ test("Convex HTTP exposes a signed GitHub webhook endpoint for ping only", async
   assert.match(source, /sha256=/);
   assert.match(source, /X-GitHub-Event/);
   assert.match(source, /eventName === "ping"/);
-  assert.match(source, /Push handling lands in TASK-12/);
+  assert.match(source, /eventName !== "push"/);
+  assert.match(source, /ctx\.runMutation\(internal\.http\.createDraftFromGithubPushWebhook/);
+});
+
+test("GitHub push webhooks create exactly one draft from the validated raw JSON body", async () => {
+  const source = await read("convex/http.ts");
+  const draftMutationSource = source.slice(
+    source.indexOf("export const createDraftFromGithubPushWebhook"),
+    source.indexOf("async function isValidSignature"),
+  );
+
+  assert.match(source, /if \(eventName !== "push"\)/);
+  assert.match(source, /let payload: unknown;/);
+  assert.match(source, /try \{\n\s+payload = JSON\.parse\(rawBody\);/);
+  assert.match(source, /catch \{\n\s+return new Response\("Invalid JSON", \{ status: 400 \}\);/);
+  assert.match(source, /isGitHubPushWebhookPayload\(payload\)/);
+  assert.match(source, /return new Response\("Invalid JSON", \{ status: 400 \}\)/);
+  assert.match(source, /function isGitHubRepository\(/);
+  assert.match(source, /typeof value\.id === "string" \|\| typeof value\.id === "number"/);
+  assert.match(draftMutationSource, /repos"\)\n\s+\.withIndex\("by_githubRepoId"/);
+  assert.match(draftMutationSource, /\.take\(MAX_CONNECTED_REPOS_PER_PUSH\)/);
+  assert.doesNotMatch(draftMutationSource, /by_githubRepoId"[\s\S]*?\.unique\(\)/);
+  assert.match(draftMutationSource, /for \(const repo of repos\)/);
+  assert.match(draftMutationSource, /drafts"\)\n\s+\.withIndex\("by_repoId_and_commitSha"/);
+  assert.match(draftMutationSource, /\.take\(1\)/);
+  assert.match(source, /isValidPushCommit\(payload\.head_commit\)/);
+  assert.match(source, /typeof commit\.id === "string"/);
+  assert.match(source, /typeof commit\.message === "string"/);
+  assert.match(source, /payload\.commits\.find\(\(commit\) => commit\.id === after\)/);
+  assert.match(source, /status:\s*"draft"/);
+  assert.match(source, /variants:\s*\[\]/);
+  assert.match(source, /return new Response\("OK", \{ status: 200 \}\)/);
+  assert.match(source, /isDeleteOrEmptyPush\(payload\)/);
 });
 
 test("subscriber workspace exposes the repo connection flow", async () => {

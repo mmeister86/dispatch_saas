@@ -1,11 +1,11 @@
 ---
 id: TASK-8
 title: 'T-010: Convex schema: `users`, `subscriptions`, `repos`, `drafts`'
-status: In Progress
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 08:51'
+updated_date: '2026-06-18 09:16'
 labels:
   - imported-from-docs
   - phase-2
@@ -18,7 +18,7 @@ modified_files:
   - convex/tsconfig.json
   - convex/_generated/dataModel.d.ts
   - tests/schema-contract.test.mjs
-ordinal: 8000
+ordinal: 9000
 ---
 
 ## Description
