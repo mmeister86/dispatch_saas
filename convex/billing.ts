@@ -110,7 +110,6 @@ async function createLemonCheckout({
             },
           },
           product_options: {
-            enabled_variants: [Number(variantId)],
             redirect_url: env.APP_URL,
             receipt_button_text: "Go to Dispatch",
             receipt_thank_you_note:
@@ -136,7 +135,11 @@ async function createLemonCheckout({
   });
 
   if (!response.ok) {
-    throw new Error(`Lemon Squeezy checkout failed: ${response.status}`);
+    const responseBody = await response.text();
+
+    throw new Error(
+      `Lemon Squeezy checkout failed: ${response.status} ${responseBody}`,
+    );
   }
 
   const payload = (await response.json()) as {

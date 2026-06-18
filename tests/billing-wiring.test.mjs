@@ -45,6 +45,9 @@ test("checkout creation derives the user server-side and embeds Lemon custom dat
   assert.match(source, /Authorization:\s*`Bearer \$\{env\.LEMONSQUEEZY_API_KEY\}`/);
   assert.match(source, /checkout_data/);
   assert.match(source, /custom:\s*\{[^}]*userId[^}]*plan/s);
+  assert.doesNotMatch(source, /Number\(variantId\)/);
+  assert.match(source, /await response\.text\(\)/);
+  assert.match(source, /responseBody/);
   assert.match(source, /return\s+\{\s*url:/);
 });
 
