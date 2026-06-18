@@ -1,11 +1,11 @@
 ---
 id: TASK-12
 title: 'T-014: GitHub push webhook handler → `draft` stub'
-status: In Progress
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 15:43'
+updated_date: '2026-06-18 15:52'
 labels:
   - imported-from-docs
   - phase-2
@@ -93,3 +93,23 @@ Reviews:
 - Spec compliance reviewer approved after validation/test hardening.
 - Code quality reviewer approved after replacing `.unique()` on `by_githubRepoId` with bounded multi-repo processing.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented the signed GitHub push webhook handler for T-014.
+
+Summary:
+- `/github/webhook` now handles valid `push` events after signature validation and creates `draft` stubs with commit SHA/message, empty variants, and `draft` status.
+- Payload parsing is guarded so invalid JSON and malformed push payloads return 400 instead of crashing.
+- Replay/idempotency is enforced per connected repo and commit SHA, and repo lookup handles multiple connected rows without `.unique()` failures.
+
+Verification:
+- `pnpm test` passed: 28/28.
+- `pnpm lint` passed with 0 errors and 4 existing generated Convex warnings.
+- `pnpm build` passed outside the sandbox after Turbopack/PostCSS required port-binding permissions.
+
+Reviews:
+- Spec compliance review approved.
+- Code quality review approved after bounded multi-repo handling was added.
+<!-- SECTION:FINAL_SUMMARY:END -->
