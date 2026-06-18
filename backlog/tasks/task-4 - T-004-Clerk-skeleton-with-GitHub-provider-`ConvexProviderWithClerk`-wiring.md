@@ -5,7 +5,7 @@ status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-17 08:03'
+updated_date: '2026-06-18 09:14'
 labels:
   - imported-from-docs
   - phase-1
@@ -63,6 +63,8 @@ Steps:
 Implemented Clerk + Convex auth skeleton on 2026-06-17. Added Convex auth config, viewer query, ConvexProviderWithClerk client provider, ClerkProvider wrapping, and a minimal home screen for signed-out/sign-in and signed-in Convex identity verification. Added node --test auth wiring checks. Set CLERK_JWT_ISSUER_DOMAIN in local .env.local and Convex dev deployment careful-ox-998. Verification: pnpm test passed (5/5), pnpm lint passed with 3 warnings in Convex generated files, pnpm build passed when run outside sandbox due Turbopack sandbox port-binding restriction. Acceptance criterion is not checked yet because manual GitHub sign-in + reload verification still needs user/browser confirmation.
 
 Started local dev server for manual acceptance check: http://localhost:3000. Smoke check returned HTTP 200. Task remains In Progress until the user confirms GitHub sign-in, Convex identity display, and reload persistence.
+
+Follow-up verified on 2026-06-18: user reported the browser check now shows Convex identity with email, name, and Clerk token identifier. Root cause was missing Clerk JWT template `convex`; created/updated it via Clerk CLI with claims `aud: "convex"`, `email: "{{user.primary_email_address}}"`, and `name: "{{user.full_name}}"`.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
