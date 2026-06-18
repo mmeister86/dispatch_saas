@@ -7,6 +7,28 @@ import type { Id } from "./_generated/dataModel";
 const http = httpRouter();
 
 http.route({
+  path: "/github/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const rawBody = await req.text();
+    const signature = req.headers.get("X-Hub-Signature-256") ?? "";
+
+    if (!(await isValidGithubSignature(rawBody, signature))) {
+      return new Response("Invalid signature", { status: 401 });
+    }
+
+    const eventName = req.headers.get("X-GitHub-Event");
+
+    if (eventName === "ping") {
+      return new Response("OK", { status: 200 });
+    }
+
+    // Push handling lands in TASK-12 / T-014.
+    return new Response("OK", { status: 200 });
+  }),
+});
+
+http.route({
   path: "/lemon-squeezy/webhook",
   method: "POST",
   handler: httpAction(async (ctx, req) => {
@@ -67,6 +89,19 @@ http.route({
   }),
 });
 
+async function isValidGithubSignature(rawBody: string, signature: string) {
+  if (!signature.startsWith("sha256=")) {
+    return false;
+  }
+
+  const expected = `sha256=${await hmacSha256Hex(
+    rawBody,
+    env.GITHUB_WEBHOOK_SECRET,
+  )}`;
+
+  return timingSafeHexEqual(expected, signature);
+}
+
 export const upsertSubscriptionFromWebhook = internalMutation({
   args: {
     userId: v.id("users"),
@@ -120,9 +155,15 @@ async function isValidSignature(rawBody: string, signature: string) {
     return false;
   }
 
+  const expected = await hmacSha256Hex(rawBody, env.LEMONSQUEEZY_WEBHOOK_SECRET);
+
+  return timingSafeHexEqual(expected, signature);
+}
+
+async function hmacSha256Hex(rawBody: string, secret: string) {
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(env.LEMONSQUEEZY_WEBHOOK_SECRET),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
@@ -132,9 +173,7 @@ async function isValidSignature(rawBody: string, signature: string) {
     key,
     new TextEncoder().encode(rawBody),
   );
-  const expected = toHex(new Uint8Array(digest));
-
-  return timingSafeHexEqual(expected, signature);
+  return toHex(new Uint8Array(digest));
 }
 
 function toHex(bytes: Uint8Array) {

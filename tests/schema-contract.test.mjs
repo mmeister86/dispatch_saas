@@ -46,7 +46,11 @@ test("repos and drafts tables support the commit to posted draft flow", async ()
 
   assert.match(source, /githubRepoId:\s*v\.string\(\)/);
   assert.match(source, /fullName:\s*v\.string\(\)/);
-  assert.match(source, /webhookId:\s*v\.string\(\)/);
+  assert.match(source, /private:\s*v\.boolean\(\)/);
+  assert.match(source, /htmlUrl:\s*v\.string\(\)/);
+  assert.match(source, /githubInstallationId:\s*v\.string\(\)/);
+  assert.match(source, /githubAccountLogin:\s*v\.optional\(v\.string\(\)\)/);
+  assert.doesNotMatch(source, /webhookId:\s*v\.string\(\)/);
   assert.match(source, /connectedAt:\s*v\.number\(\)/);
   assert.match(source, /repoId:\s*v\.id\("repos"\)/);
   assert.match(source, /commitSha:\s*v\.string\(\)/);
@@ -74,6 +78,7 @@ test("schema defines the indexes needed by upcoming core tasks", async () => {
     "by_status",
     "by_githubRepoId",
     "by_userId_and_githubRepoId",
+    "by_userId_and_githubInstallationId",
     "by_userId_and_status",
     "by_repoId_and_commitSha",
   ]) {

@@ -26,6 +26,10 @@ import type { DataModel } from "./dataModel.js";
  */
 type Env = {
   readonly APP_URL: string;
+  readonly GITHUB_APP_ID: string;
+  readonly GITHUB_APP_INSTALL_URL: string;
+  readonly GITHUB_APP_PRIVATE_KEY: string;
+  readonly GITHUB_WEBHOOK_SECRET: string;
   readonly LEMONSQUEEZY_API_KEY: string;
   readonly LEMONSQUEEZY_BETTER_VARIANT_ID: string;
   readonly LEMONSQUEEZY_GOOD_VARIANT_ID: string;

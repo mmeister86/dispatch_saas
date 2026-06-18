@@ -1,0 +1,135 @@
+import { access, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+async function read(path) {
+  return await readFile(new URL(`../${path}`, import.meta.url), "utf8");
+}
+
+async function pathExists(path) {
+  try {
+    await access(new URL(`../${path}`, import.meta.url), constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+test("Convex app declares GitHub connection environment variables", async () => {
+  const source = await read("convex/convex.config.ts");
+
+  for (const name of [
+    "GITHUB_APP_ID",
+    "GITHUB_APP_PRIVATE_KEY",
+    "GITHUB_APP_INSTALL_URL",
+    "GITHUB_WEBHOOK_SECRET",
+  ]) {
+    assert.match(source, new RegExp(`${name}:\\s*v\\.string\\(\\)`));
+  }
+
+  assert.doesNotMatch(source, /CLERK_SECRET_KEY:\s*v\.string\(\)/);
+  assert.doesNotMatch(source, /CONVEX_SITE_URL:\s*v\.string\(\)/);
+});
+
+test("GitHub actions derive the signed-in user and never accept client user ids", async () => {
+  assert.equal(await pathExists("convex/github.ts"), true);
+
+  const source = await read("convex/github.ts");
+
+  for (const exportName of [
+    "connectedRepos",
+    "completeInstallation",
+    "connectInstalledRepository",
+  ]) {
+    assert.match(source, new RegExp(`export const ${exportName}`));
+  }
+
+  assert.match(source, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(source, /identity\.tokenIdentifier/);
+  assert.match(source, /hasActiveSubscriptionForUser/);
+
+  const publicActionsSource = source.slice(0, source.indexOf("export const requireActiveUserAccess"));
+  assert.doesNotMatch(publicActionsSource, /userId:\s*v\./);
+});
+
+test("GitHub connection uses GitHub App installation tokens instead of Clerk OAuth", async () => {
+  const source = await read("convex/github.ts");
+  const schema = await read("convex/schema.ts");
+
+  assert.match(source, /env\.GITHUB_APP_ID/);
+  assert.match(source, /env\.GITHUB_APP_PRIVATE_KEY/);
+  assert.match(source, /createGitHubAppJwt/);
+  assert.match(source, /\/app\/installations\/\$\{installationId\}\/access_tokens/);
+  assert.match(source, /Authorization:\s*`Bearer \$\{appJwt\}`/);
+  assert.match(source, /\/installation\/repositories\?per_page=100/);
+  assert.match(source, /BEGIN RSA PRIVATE KEY/);
+  assert.match(source, /wrapPkcs1PrivateKeyAsPkcs8/);
+  assert.doesNotMatch(source, /oauth_access_tokens/);
+  assert.doesNotMatch(source, /env\.CLERK_SECRET_KEY/);
+  assert.doesNotMatch(source, /identity\.subject/);
+  assert.doesNotMatch(source, /https:\/\/api\.github\.com\/user\/repos/);
+  assert.doesNotMatch(schema, /githubAccessToken/);
+  assert.doesNotMatch(source, /githubAccessToken:\s*/);
+});
+
+test("GitHub installation flow returns selectable installed repositories", async () => {
+  const source = await read("convex/github.ts");
+
+  assert.match(source, /completeInstallation/);
+  assert.match(source, /kind:\s*"selectionRequired"/);
+  assert.match(source, /kind:\s*"connected"/);
+  assert.match(source, /connectInstalledRepository/);
+  assert.match(source, /githubRepoId:\s*String\(repo\.id\)/);
+  assert.match(source, /fullName:\s*repo\.full_name/);
+  assert.match(source, /htmlUrl:\s*repo\.html_url/);
+});
+
+test("GitHub repo storage enforces Good and Better tier limits server-side", async () => {
+  const source = await read("convex/github.ts");
+  const schema = await read("convex/schema.ts");
+
+  assert.match(source, /const REPO_LIMITS = \{\s*good:\s*1,\s*better:\s*5/s);
+  assert.match(source, /repoLimitForPlan\(subscription\.plan\)/);
+  assert.match(source, /existingRepos\.length >= args\.repoLimit/);
+  assert.match(source, /Good supports 1 connected repo/);
+  assert.match(source, /Better supports 5 connected repos/);
+  assert.match(source, /ctx\.db\.insert\("repos"/);
+  assert.match(source, /ctx\.db\.patch\(existing\._id/);
+  assert.match(schema, /githubInstallationId:\s*v\.string\(\)/);
+  assert.match(schema, /githubAccountLogin:\s*v\.optional\(v\.string\(\)\)/);
+  assert.match(schema, /by_userId_and_githubInstallationId/);
+  assert.doesNotMatch(source, /\/repos\/\$\{owner\}\/\$\{repoName\}\/hooks/);
+  assert.doesNotMatch(source, /webhookId/);
+  assert.doesNotMatch(schema, /webhookId/);
+});
+
+test("Convex HTTP exposes a signed GitHub webhook endpoint for ping only", async () => {
+  const source = await read("convex/http.ts");
+
+  assert.match(source, /path:\s*"\/github\/webhook"/);
+  assert.match(source, /method:\s*"POST"/);
+  assert.match(source, /X-Hub-Signature-256/);
+  assert.match(source, /env\.GITHUB_WEBHOOK_SECRET/);
+  assert.match(source, /crypto\.subtle\.importKey/);
+  assert.match(source, /sha256=/);
+  assert.match(source, /X-GitHub-Event/);
+  assert.match(source, /eventName === "ping"/);
+  assert.match(source, /Push handling lands in TASK-12/);
+});
+
+test("subscriber workspace exposes the repo connection flow", async () => {
+  const source = await read("app/page.tsx");
+
+  assert.match(source, /api\.github\.connectedRepos/);
+  assert.match(source, /api\.github\.completeInstallation/);
+  assert.match(source, /api\.github\.connectInstalledRepository/);
+  assert.match(source, /repoCount/);
+  assert.match(source, /repoLimit/);
+  assert.match(source, /Install GitHub App/);
+  assert.match(source, /href=\{installUrl\}/);
+  assert.match(source, /installation_id/);
+  assert.match(source, /Upgrade to Better/);
+  assert.doesNotMatch(source, /window\.location\.assign\(installUrl\)/);
+  assert.doesNotMatch(source, /Load repositories/);
+});

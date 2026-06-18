@@ -43,12 +43,19 @@ export default defineSchema({
     userId: v.id("users"),
     githubRepoId: v.string(),
     fullName: v.string(),
-    webhookId: v.string(),
+    private: v.boolean(),
+    htmlUrl: v.string(),
+    githubInstallationId: v.string(),
+    githubAccountLogin: v.optional(v.string()),
     connectedAt: v.number(),
   })
     .index("by_userId", ["userId"])
     .index("by_githubRepoId", ["githubRepoId"])
-    .index("by_userId_and_githubRepoId", ["userId", "githubRepoId"]),
+    .index("by_userId_and_githubRepoId", ["userId", "githubRepoId"])
+    .index("by_userId_and_githubInstallationId", [
+      "userId",
+      "githubInstallationId",
+    ]),
 
   drafts: defineTable({
     userId: v.id("users"),

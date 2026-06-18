@@ -10,6 +10,7 @@
 
 import type * as billing from "../billing.js";
 import type * as email from "../email.js";
+import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as viewer from "../viewer.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   billing: typeof billing;
   email: typeof email;
+  github: typeof github;
   http: typeof http;
   viewer: typeof viewer;
 }>;

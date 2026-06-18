@@ -10,6 +10,10 @@ const app = defineApp({
     LEMONSQUEEZY_BETTER_VARIANT_ID: v.string(),
     LEMONSQUEEZY_WEBHOOK_SECRET: v.string(),
     APP_URL: v.string(),
+    GITHUB_APP_ID: v.string(),
+    GITHUB_APP_PRIVATE_KEY: v.string(),
+    GITHUB_APP_INSTALL_URL: v.string(),
+    GITHUB_WEBHOOK_SECRET: v.string(),
   },
 });
 app.use(resend);
