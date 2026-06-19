@@ -9,6 +9,7 @@
  */
 
 import type * as billing from "../billing.js";
+import type * as drafts from "../drafts.js";
 import type * as email from "../email.js";
 import type * as generation from "../generation.js";
 import type * as generationCore from "../generationCore.js";
@@ -16,6 +17,7 @@ import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as viewer from "../viewer.js";
 import type * as x from "../x.js";
+import type * as xApi from "../xApi.js";
 
 import type {
   ApiFromModules,
@@ -25,6 +27,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   billing: typeof billing;
+  drafts: typeof drafts;
   email: typeof email;
   generation: typeof generation;
   generationCore: typeof generationCore;
@@ -32,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   viewer: typeof viewer;
   x: typeof x;
+  xApi: typeof xApi;
 }>;
 
 /**

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { createXPost } from "./xApi";
 import {
   action,
   env,
@@ -8,7 +9,7 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
@@ -80,6 +81,105 @@ export const startConnection = action({
     });
 
     return { url: `${X_AUTHORIZE_URL}?${params.toString()}` };
+  },
+});
+
+export const postDraft = action({
+  args: {
+    draftId: v.id("drafts"),
+    text: v.string(),
+  },
+  returns: v.object({ xPostId: v.string() }),
+  handler: async (ctx, args): Promise<{ xPostId: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      throw new Error("Sign in before posting.");
+    }
+
+    const trimmedText = args.text.trim();
+
+    if (trimmedText.length === 0) {
+      throw new Error("Post text cannot be empty.");
+    }
+
+    if (trimmedText.length > 280) {
+      throw new Error("Post text must be 280 characters or fewer.");
+    }
+
+    const postingContext: DraftPostingContext = await ctx.runQuery(
+      internal.x.getDraftForPosting,
+      {
+        clerkTokenIdentifier: identity.tokenIdentifier,
+        draftId: args.draftId,
+      },
+    );
+
+    if (postingContext.status === "posted") {
+      return { xPostId: postingContext.xPostId };
+    }
+
+    if (postingContext.tokenExpiresAt <= Date.now()) {
+      await ctx.runAction(internal.x.refreshUserToken, {
+        userId: postingContext.userId,
+      });
+    }
+
+    const refreshedContext: DraftPostingContext = await ctx.runQuery(
+      internal.x.getDraftForPosting,
+      {
+        clerkTokenIdentifier: identity.tokenIdentifier,
+        draftId: args.draftId,
+      },
+    );
+
+    if (refreshedContext.status === "posted") {
+      return { xPostId: refreshedContext.xPostId };
+    }
+
+    const claimedDraft = await ctx.runMutation(internal.x.claimDraftPosting, {
+      draftId: args.draftId,
+      userId: refreshedContext.userId,
+      chosenText: trimmedText,
+      now: Date.now(),
+    });
+
+    let post: { xPostId: string };
+    try {
+      post = await createXPost({
+        accessToken: refreshedContext.accessToken,
+        text: trimmedText,
+        mediaId: claimedDraft.mediaId,
+      });
+    } catch (err) {
+      await ctx.runMutation(internal.x.clearDraftPosting, {
+        draftId: args.draftId,
+        userId: refreshedContext.userId,
+      });
+      throw err;
+    }
+
+    const postedAt = Date.now();
+
+    try {
+      await ctx.runMutation(internal.x.markDraftPosted, {
+        draftId: args.draftId,
+        userId: refreshedContext.userId,
+        chosenText: trimmedText,
+        xPostId: post.xPostId,
+        postedAt,
+      });
+    } catch {
+      await ctx.runMutation(internal.x.recoverPostedDraftRecord, {
+        draftId: args.draftId,
+        userId: refreshedContext.userId,
+        chosenText: trimmedText,
+        xPostId: post.xPostId,
+        postedAt,
+      });
+    }
+
+    return post;
   },
 });
 
@@ -175,6 +275,111 @@ export const requireActiveXUser = internalQuery({
     }
 
     return user._id;
+  },
+});
+
+export const getDraftForPosting = internalQuery({
+  args: {
+    clerkTokenIdentifier: v.string(),
+    draftId: v.id("drafts"),
+  },
+  returns: v.union(
+    v.object({
+      status: v.literal("draft"),
+      userId: v.id("users"),
+      accessToken: v.string(),
+      tokenExpiresAt: v.number(),
+      mediaId: v.optional(v.string()),
+    }),
+    v.object({
+      status: v.literal("posted"),
+      xPostId: v.string(),
+    }),
+  ),
+  handler: async (ctx, args): Promise<DraftPostingContext> => {
+    const user = await getSubscribedUserByTokenIdentifier(
+      ctx,
+      args.clerkTokenIdentifier,
+    );
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== user._id) {
+      throw new Error("Draft not found.");
+    }
+
+    if (draft.status === "posted") {
+      if (!draft.xPostId) {
+        throw new Error("Posted draft is missing its X post id.");
+      }
+
+      return {
+        status: "posted",
+        xPostId: draft.xPostId,
+      };
+    }
+
+    if (draft.status !== "draft") {
+      throw new Error("Only draft posts can be posted.");
+    }
+
+    if (draft.postingStartedAt) {
+      throw new Error("This draft is already being posted.");
+    }
+
+    if (!user.xAccessToken || !user.xRefreshToken || !user.xTokenExpiresAt) {
+      throw new Error("Connect X before posting.");
+    }
+
+    return {
+      status: "draft",
+      userId: user._id,
+      accessToken: user.xAccessToken,
+      tokenExpiresAt: user.xTokenExpiresAt,
+      ...(draft.mediaId ? { mediaId: draft.mediaId } : {}),
+    };
+  },
+});
+
+export const getDraftForMediaUpload = internalQuery({
+  args: {
+    clerkTokenIdentifier: v.string(),
+    draftId: v.id("drafts"),
+  },
+  returns: v.object({
+    userId: v.id("users"),
+    accessToken: v.string(),
+    tokenExpiresAt: v.number(),
+    mediaId: v.optional(v.string()),
+  }),
+  handler: async (ctx, args): Promise<DraftMediaUploadContext> => {
+    const user = await getSubscribedUserByTokenIdentifier(
+      ctx,
+      args.clerkTokenIdentifier,
+    );
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== user._id) {
+      throw new Error("Draft not found.");
+    }
+
+    if (draft.status !== "draft") {
+      throw new Error("Only draft posts can receive media.");
+    }
+
+    if (draft.postingStartedAt) {
+      throw new Error("This draft is already being posted.");
+    }
+
+    if (!user.xAccessToken || !user.xRefreshToken || !user.xTokenExpiresAt) {
+      throw new Error("Connect X before uploading media.");
+    }
+
+    return {
+      userId: user._id,
+      accessToken: user.xAccessToken,
+      tokenExpiresAt: user.xTokenExpiresAt,
+      ...(draft.mediaId ? { mediaId: draft.mediaId } : {}),
+    };
   },
 });
 
@@ -281,6 +486,161 @@ export const getRefreshToken = internalQuery({
   },
 });
 
+export const claimDraftPosting = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    userId: v.id("users"),
+    chosenText: v.string(),
+    now: v.number(),
+  },
+  returns: v.object({
+    mediaId: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== args.userId) {
+      throw new Error("Draft not found.");
+    }
+
+    if (draft.status !== "draft") {
+      throw new Error("Only draft posts can be posted.");
+    }
+
+    if (draft.postingStartedAt) {
+      throw new Error("This draft is already being posted.");
+    }
+
+    await ctx.db.patch(args.draftId, {
+      chosenText: args.chosenText,
+      postingStartedAt: args.now,
+    });
+
+    return {
+      ...(draft.mediaId ? { mediaId: draft.mediaId } : {}),
+    };
+  },
+});
+
+export const clearDraftPosting = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    userId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== args.userId) {
+      return null;
+    }
+
+    if (draft.status !== "draft") {
+      return null;
+    }
+
+    await ctx.db.patch(args.draftId, {
+      postingStartedAt: undefined,
+    });
+
+    return null;
+  },
+});
+
+export const markDraftPosted = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    userId: v.id("users"),
+    chosenText: v.string(),
+    xPostId: v.string(),
+    postedAt: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== args.userId) {
+      throw new Error("Draft not found.");
+    }
+
+    if (draft.status === "posted") {
+      return null;
+    }
+
+    if (draft.status !== "draft") {
+      throw new Error("Only draft posts can be posted.");
+    }
+
+    await ctx.db.patch(args.draftId, {
+      chosenText: args.chosenText,
+      status: "posted",
+      xPostId: args.xPostId,
+      postedAt: args.postedAt,
+      postingStartedAt: undefined,
+    });
+
+    return null;
+  },
+});
+
+export const recoverPostedDraftRecord = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    userId: v.id("users"),
+    chosenText: v.string(),
+    xPostId: v.string(),
+    postedAt: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== args.userId) {
+      throw new Error("Draft not found.");
+    }
+
+    await ctx.db.patch(args.draftId, {
+      chosenText: args.chosenText,
+      status: "posted",
+      xPostId: args.xPostId,
+      postedAt: args.postedAt,
+      postingStartedAt: undefined,
+    });
+
+    return null;
+  },
+});
+
+export const storeDraftMedia = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    userId: v.id("users"),
+    mediaId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+
+    if (draft === null || draft.userId !== args.userId) {
+      throw new Error("Draft not found.");
+    }
+
+    if (draft.status !== "draft") {
+      throw new Error("Only draft posts can receive media.");
+    }
+
+    if (draft.postingStartedAt) {
+      throw new Error("This draft is already being posted.");
+    }
+
+    await ctx.db.patch(args.draftId, {
+      mediaId: args.mediaId,
+    });
+
+    return null;
+  },
+});
+
 type XTokenResponse = {
   access_token: string;
   refresh_token: string;
@@ -299,6 +659,26 @@ type OAuthState = {
   codeVerifier: string;
 };
 
+type DraftPostingContext =
+  | {
+      status: "draft";
+      userId: Id<"users">;
+      accessToken: string;
+      tokenExpiresAt: number;
+      mediaId?: string;
+    }
+  | {
+      status: "posted";
+      xPostId: string;
+    };
+
+type DraftMediaUploadContext = {
+  userId: Id<"users">;
+  accessToken: string;
+  tokenExpiresAt: number;
+  mediaId?: string;
+};
+
 async function getCurrentUser(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
 
@@ -312,6 +692,33 @@ async function getCurrentUser(ctx: QueryCtx) {
       q.eq("clerkTokenIdentifier", identity.tokenIdentifier),
     )
     .unique();
+}
+
+async function getSubscribedUserByTokenIdentifier(
+  ctx: QueryCtx,
+  clerkTokenIdentifier: string,
+): Promise<Doc<"users">> {
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkTokenIdentifier", (q) =>
+      q.eq("clerkTokenIdentifier", clerkTokenIdentifier),
+    )
+    .unique();
+
+  if (user === null) {
+    throw new Error("Subscribe before posting.");
+  }
+
+  const hasActiveSubscription: boolean = await ctx.runQuery(
+    internal.billing.hasActiveSubscriptionForUser,
+    { userId: user._id },
+  );
+
+  if (!hasActiveSubscription) {
+    throw new Error("Subscribe before posting.");
+  }
+
+  return user;
 }
 
 async function requestToken(params: Record<string, string>) {

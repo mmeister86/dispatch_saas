@@ -4,11 +4,13 @@ import {
   Show,
   SignInButton,
   UserButton,
+  useAuth,
   useUser,
 } from "@clerk/nextjs";
 import { useAction, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 
 type RepositoryOption = {
   githubRepoId: string;
@@ -25,6 +27,20 @@ type ConnectedRepository = RepositoryOption & {
 type PendingSelection = {
   installationId: string;
   repositories: RepositoryOption[];
+};
+
+type DraftReviewItem = {
+  _id: Id<"drafts">;
+  repoFullName: string;
+  commitSha: string;
+  commitMessage: string;
+  variants: string[];
+  chosenText?: string;
+  mediaId?: string;
+  status: "draft" | "posted" | "discarded";
+  xPostId?: string;
+  postedAt?: number;
+  createdAt: number;
 };
 
 export default function Home() {
@@ -178,6 +194,7 @@ function SubscriberApp({
 
       <GitHubRepoPanel />
       <XAccountPanel />
+      <DraftReviewPanel />
 
       <dl className="grid gap-3 border border-black/10 p-5 text-sm sm:grid-cols-3">
         <div>
@@ -198,6 +215,265 @@ function SubscriberApp({
         </div>
       </dl>
     </div>
+  );
+}
+
+function DraftReviewPanel() {
+  const drafts = useQuery(api.drafts.listForReview);
+  const postDraft = useAction(api.x.postDraft);
+  const { getToken } = useAuth();
+  const [draftText, setDraftText] = useState<Record<string, string>>({});
+  const [postingDraftId, setPostingDraftId] = useState<string | null>(null);
+  const [uploadingDraftId, setUploadingDraftId] = useState<string | null>(null);
+  const [noticeByDraftId, setNoticeByDraftId] = useState<Record<string, string>>(
+    {},
+  );
+  const [errorByDraftId, setErrorByDraftId] = useState<Record<string, string>>(
+    {},
+  );
+
+  async function handlePost(draft: DraftReviewItem) {
+    const text = selectedTextForDraft(draft).trim();
+
+    if (text.length === 0 || draft.status !== "draft") {
+      return;
+    }
+
+    setPostingDraftId(draft._id);
+    setErrorByDraftId((current) => ({ ...current, [draft._id]: "" }));
+    setNoticeByDraftId((current) => ({ ...current, [draft._id]: "" }));
+
+    try {
+      const result = await postDraft({ draftId: draft._id, text });
+      setNoticeByDraftId((current) => ({
+        ...current,
+        [draft._id]: `Posted to X as ${result.xPostId}.`,
+      }));
+    } catch (err) {
+      setErrorByDraftId((current) => ({
+        ...current,
+        [draft._id]: errorMessage(err, "Posting failed. Try again."),
+      }));
+    } finally {
+      setPostingDraftId(null);
+    }
+  }
+
+  async function handleUpload(draft: DraftReviewItem, file: File | null) {
+    if (file === null || draft.status !== "draft") {
+      return;
+    }
+
+    const siteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
+
+    if (!siteUrl) {
+      setErrorByDraftId((current) => ({
+        ...current,
+        [draft._id]: "Missing Convex site URL for uploads.",
+      }));
+      return;
+    }
+
+    setUploadingDraftId(draft._id);
+    setErrorByDraftId((current) => ({ ...current, [draft._id]: "" }));
+    setNoticeByDraftId((current) => ({ ...current, [draft._id]: "" }));
+
+    try {
+      const token = await getToken({ template: "convex" });
+
+      if (!token) {
+        throw new Error("Sign in again before uploading media.");
+      }
+
+      const formData = new FormData();
+      formData.append("draftId", draft._id);
+      formData.append("file", file);
+
+      const response = await fetch(`${siteUrl}/x/media/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        mediaId?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Image upload failed.");
+      }
+
+      setNoticeByDraftId((current) => ({
+        ...current,
+        [draft._id]: payload.mediaId
+          ? `Image attached as ${payload.mediaId}.`
+          : "Image attached.",
+      }));
+    } catch (err) {
+      setErrorByDraftId((current) => ({
+        ...current,
+        [draft._id]: errorMessage(err, "Image upload failed. Try again."),
+      }));
+    } finally {
+      setUploadingDraftId(null);
+    }
+  }
+
+  function selectedTextForDraft(draft: DraftReviewItem) {
+    return draftText[draft._id] ?? draft.chosenText ?? draft.variants[0] ?? "";
+  }
+
+  return (
+    <section className="border border-black/10 p-5">
+      <div>
+        <p className="text-sm font-medium text-zinc-500">Draft review</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-normal">
+          Choose a variant and post
+        </h2>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-700">
+          Pick the draft that sounds like you, tweak it, attach one image if it
+          helps, then post to X.
+        </p>
+      </div>
+
+      {drafts === undefined ? (
+        <p className="mt-4 text-sm text-zinc-500">Loading drafts...</p>
+      ) : drafts.length === 0 ? (
+        <p className="mt-4 text-sm text-zinc-600">
+          No drafts yet. Push a commit to a connected repo to generate one.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-4">
+          {drafts.map((draft: DraftReviewItem) => {
+            const selectedText = selectedTextForDraft(draft);
+            const isPosting = postingDraftId === draft._id;
+            const isUploading = uploadingDraftId === draft._id;
+            const canPost =
+              draft.status === "draft" &&
+              selectedText.trim().length > 0 &&
+              selectedText.trim().length <= 280 &&
+              !isPosting &&
+              !isUploading;
+
+            return (
+              <article className="border border-black/10 p-4" key={draft._id}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-medium text-zinc-900">
+                      {draft.repoFullName}
+                    </p>
+                    <p className="mt-1 break-words text-xs text-zinc-500">
+                      {draft.commitSha.slice(0, 7)} · {draft.commitMessage}
+                    </p>
+                  </div>
+                  {draft.status === "posted" && draft.xPostId ? (
+                    <p className="text-xs font-medium text-emerald-700">
+                      Posted: {draft.xPostId}
+                    </p>
+                  ) : null}
+                </div>
+
+                {draft.variants.length === 0 ? (
+                  <p className="mt-4 text-sm text-zinc-500">
+                    Generating variants...
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-2">
+                    <p className="text-sm font-medium text-zinc-900">
+                      Choose a variant
+                    </p>
+                    {draft.variants.map((variant) => (
+                      <button
+                        className="border border-black/10 p-3 text-left text-sm leading-6 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={draft.status !== "draft"}
+                        key={variant}
+                        onClick={() =>
+                          setDraftText((current) => ({
+                            ...current,
+                            [draft._id]: variant,
+                          }))
+                        }
+                        type="button"
+                      >
+                        {variant}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <textarea
+                  className="mt-4 min-h-32 w-full resize-y border border-black/20 p-3 text-sm leading-6 outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-zinc-50"
+                  disabled={draft.status !== "draft"}
+                  maxLength={280}
+                  onChange={(event) =>
+                    setDraftText((current) => ({
+                      ...current,
+                      [draft._id]: event.target.value,
+                    }))
+                  }
+                  value={selectedText}
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  {selectedText.length}/280
+                </p>
+
+                <div className="mt-4 grid gap-3">
+                  <label className="block text-sm">
+                    <span className="font-medium text-zinc-900">
+                      Optional image
+                    </span>
+                    <input
+                      accept="image/png,image/jpeg,image/webp"
+                      className="mt-2 block w-full text-sm"
+                      disabled={draft.status !== "draft" || isUploading}
+                      onChange={(event) =>
+                        void handleUpload(
+                          draft,
+                          event.currentTarget.files?.[0] ?? null,
+                        )
+                      }
+                      type="file"
+                    />
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    {draft.mediaId
+                      ? `Attached media ${draft.mediaId}.`
+                      : "Text-only remains ready."}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    className="h-10 border border-black bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={!canPost}
+                    onClick={() => void handlePost(draft)}
+                    type="button"
+                  >
+                    {isPosting ? "Posting..." : "Post to X"}
+                  </button>
+                  {isUploading ? (
+                    <p className="text-sm text-zinc-500">Uploading image...</p>
+                  ) : null}
+                  {noticeByDraftId[draft._id] ? (
+                    <p className="text-sm text-emerald-700">
+                      {noticeByDraftId[draft._id]}
+                    </p>
+                  ) : null}
+                </div>
+
+                {errorByDraftId[draft._id] ? (
+                  <div className="mt-4 border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+                    {errorByDraftId[draft._id]}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
 

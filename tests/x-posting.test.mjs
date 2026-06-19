@@ -1,0 +1,112 @@
+import { access, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+async function read(path) {
+  return await readFile(new URL(`../${path}`, import.meta.url), "utf8");
+}
+
+async function pathExists(path) {
+  try {
+    await access(new URL(`../${path}`, import.meta.url), constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+test("X postDraft derives identity server-side and never accepts client user ids", async () => {
+  const source = await read("convex/x.ts");
+  const postDraftSource = source.slice(
+    source.indexOf("export const postDraft"),
+    source.indexOf("export const completeOAuthCallback"),
+  );
+  const postDraftArgsSource = postDraftSource.slice(
+    postDraftSource.indexOf("args:"),
+    postDraftSource.indexOf("handler:"),
+  );
+
+  assert.match(source, /export const postDraft = action\(\{/);
+  assert.match(postDraftSource, /draftId:\s*v\.id\("drafts"\)/);
+  assert.match(postDraftSource, /text:\s*v\.string\(\)/);
+  assert.match(postDraftSource, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(postDraftSource, /identity\.tokenIdentifier/);
+  assert.doesNotMatch(postDraftArgsSource, /userId:\s*v\./);
+  assert.doesNotMatch(postDraftSource, /xAccessToken|xRefreshToken/);
+});
+
+test("X postDraft validates ownership, subscription, draft status, and connected tokens", async () => {
+  const source = await read("convex/x.ts");
+
+  assert.match(source, /export const getDraftForPosting = internalQuery\(\{/);
+  assert.match(source, /withIndex\("by_clerkTokenIdentifier"/);
+  assert.match(source, /hasActiveSubscriptionForUser/);
+  assert.match(source, /ctx\.db\.get\(args\.draftId\)/);
+  assert.match(source, /draft\.userId !== user\._id/);
+  assert.match(source, /draft\.status !== "draft"/);
+  assert.match(source, /draft\.status === "posted"/);
+  assert.match(source, /xAccessToken/);
+  assert.match(source, /xRefreshToken/);
+  assert.match(source, /Connect X before posting/);
+  assert.match(source, /Post text cannot be empty/);
+});
+
+test("X postDraft refreshes expired tokens, posts text, and stores the X post id after success", async () => {
+  const source = await read("convex/x.ts");
+  const xApiSource = await read("convex/xApi.ts");
+  const postDraftSource = source.slice(
+    source.indexOf("export const postDraft"),
+    source.indexOf("export const getDraftForPosting"),
+  );
+
+  assert.match(postDraftSource, /tokenExpiresAt <= Date\.now\(\)/);
+  assert.match(postDraftSource, /ctx\.runAction\(internal\.x\.refreshUserToken/);
+  assert.match(postDraftSource, /ctx\.runQuery\(\s*internal\.x\.getDraftForPosting/);
+  assert.match(postDraftSource, /ctx\.runMutation\(internal\.x\.claimDraftPosting/);
+  assert.match(postDraftSource, /createXPost\(\{/);
+  assert.match(postDraftSource, /accessToken:\s*refreshedContext\.accessToken/);
+  assert.match(postDraftSource, /text:\s*trimmedText/);
+  assert.match(postDraftSource, /mediaId:\s*claimedDraft\.mediaId/);
+  assert.match(postDraftSource, /recoverPostedDraftRecord/);
+  assert.match(source, /export const markDraftPosted = internalMutation\(\{/);
+  assert.match(source, /export const recoverPostedDraftRecord = internalMutation\(\{/);
+  assert.match(source, /chosenText:\s*args\.chosenText/);
+  assert.match(source, /status:\s*"posted"/);
+  assert.match(source, /xPostId:\s*args\.xPostId/);
+  assert.match(source, /postedAt:\s*args\.postedAt/);
+  assert.match(xApiSource, /const X_CREATE_POST_URL = "https:\/\/api\.x\.com\/2\/tweets"/);
+  assert.match(xApiSource, /method:\s*"POST"/);
+  assert.match(xApiSource, /Authorization:\s*`Bearer \$\{accessToken\}`/);
+  assert.match(xApiSource, /JSON\.stringify\(body\)/);
+  assert.doesNotMatch(xApiSource, /await response\.text\(\)/);
+});
+
+test("drafts query exposes a bounded review list without leaking X tokens", async () => {
+  assert.equal(await pathExists("convex/drafts.ts"), true);
+
+  const source = await read("convex/drafts.ts");
+
+  assert.match(source, /export const listForReview = query\(\{/);
+  assert.match(source, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(source, /identity\.tokenIdentifier/);
+  assert.match(source, /withIndex\("by_userId"/);
+  assert.match(source, /\.order\("desc"\)/);
+  assert.match(source, /\.take\(20\)/);
+  assert.match(source, /repoFullName/);
+  assert.match(source, /xPostId/);
+  assert.match(source, /mediaId/);
+  assert.doesNotMatch(source, /xAccessToken|xRefreshToken/);
+});
+
+test("subscriber workspace exposes a minimal draft review and post flow", async () => {
+  const source = await read("app/page.tsx");
+
+  assert.match(source, /api\.drafts\.listForReview/);
+  assert.match(source, /api\.x\.postDraft/);
+  assert.match(source, /DraftReviewPanel/);
+  assert.match(source, /Post to X/);
+  assert.match(source, /textarea/);
+  assert.match(source, /postingDraftId/);
+  assert.match(source, /Choose a variant/);
+});
