@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { uploadTweetImage } from "./xApi";
 import { env, httpAction, internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
@@ -8,6 +9,12 @@ const http = httpRouter();
 const MAX_CONNECTED_REPOS_PER_PUSH = 100;
 const OAUTH_STATE_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 const OAUTH_CODE_MAX_LENGTH = 1024;
+const MAX_TWEET_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_TWEET_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 
 http.route({
   path: "/github/webhook",
@@ -91,6 +98,131 @@ http.route({
 });
 
 http.route({
+  path: "/x/media/upload",
+  method: "OPTIONS",
+  handler: httpAction(async (_ctx, req) => {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders(req),
+    });
+  }),
+});
+
+http.route({
+  path: "/x/media/upload",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    let identity;
+    try {
+      identity = await ctx.auth.getUserIdentity();
+    } catch {
+      return jsonError("Sign in before uploading media.", 401, req);
+    }
+
+    if (identity === null) {
+      return jsonError("Sign in before uploading media.", 401, req);
+    }
+
+    const contentLengthHeader = req.headers.get("Content-Length");
+    const contentLength =
+      contentLengthHeader === null ? NaN : Number(contentLengthHeader);
+
+    if (!Number.isFinite(contentLength) || contentLength <= 0) {
+      return jsonError("Upload must include a valid content length.", 411, req);
+    }
+
+    if (contentLength > MAX_TWEET_IMAGE_BYTES + 20_000) {
+      return jsonError("Image must be 5 MB or smaller.", 413, req);
+    }
+
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return jsonError("Upload must be multipart form data.", 400, req);
+    }
+
+    const draftIds = formData.getAll("draftId");
+    const files = formData.getAll("file");
+    const draftId = draftIds[0];
+    const file = files[0];
+
+    if (
+      draftIds.length !== 1 ||
+      typeof draftId !== "string" ||
+      draftId.length === 0
+    ) {
+      return jsonError("Provide exactly one draft id.", 400, req);
+    }
+
+    if (files.length !== 1 || !(file instanceof File)) {
+      return jsonError("Upload one image file.", 400, req);
+    }
+
+    if (!ALLOWED_TWEET_IMAGE_TYPES.has(file.type)) {
+      return jsonError("Upload a PNG, JPEG, or WebP image.", 400, req);
+    }
+
+    if (file.size > MAX_TWEET_IMAGE_BYTES) {
+      return jsonError("Image must be 5 MB or smaller.", 400, req);
+    }
+
+    if (!(await hasAllowedImageSignature(file))) {
+      return jsonError("Upload a valid PNG, JPEG, or WebP image.", 400, req);
+    }
+
+    try {
+      const draftUploadContext = await ctx.runQuery(
+        internal.x.getDraftForMediaUpload,
+        {
+          clerkTokenIdentifier: identity.tokenIdentifier,
+          draftId: draftId as Id<"drafts">,
+        },
+      );
+
+      if (draftUploadContext.mediaId) {
+        return json({ mediaId: draftUploadContext.mediaId }, 200, req);
+      }
+
+      if (draftUploadContext.tokenExpiresAt <= Date.now()) {
+        await ctx.runAction(internal.x.refreshUserToken, {
+          userId: draftUploadContext.userId,
+        });
+      }
+
+      const refreshedContext = await ctx.runQuery(
+        internal.x.getDraftForMediaUpload,
+        {
+          clerkTokenIdentifier: identity.tokenIdentifier,
+          draftId: draftId as Id<"drafts">,
+        },
+      );
+
+      if (refreshedContext.mediaId) {
+        return json({ mediaId: refreshedContext.mediaId }, 200, req);
+      }
+
+      const upload = await uploadTweetImage({
+        accessToken: refreshedContext.accessToken,
+        file,
+        mediaType: file.type,
+        mediaCategory: "tweet_image",
+      });
+
+      await ctx.runMutation(internal.x.storeDraftMedia, {
+        draftId: draftId as Id<"drafts">,
+        userId: refreshedContext.userId,
+        mediaId: upload.mediaId,
+      });
+
+      return json({ mediaId: upload.mediaId }, 200, req);
+    } catch (err) {
+      return jsonError(errorMessage(err, "Image upload failed."), 400, req);
+    }
+  }),
+});
+
+http.route({
   path: "/lemon-squeezy/webhook",
   method: "POST",
   handler: httpAction(async (ctx, req) => {
@@ -150,6 +282,73 @@ http.route({
     return new Response("OK", { status: 200 });
   }),
 });
+
+function json(value: unknown, status: number, req?: Request) {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      ...(req ? corsHeaders(req) : {}),
+    },
+  });
+}
+
+function jsonError(message: string, status: number, req?: Request) {
+  return json({ error: message }, status, req);
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin");
+  const headers: Record<string, string> = {
+    Vary: "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Max-Age": "600",
+  };
+
+  if (origin === new URL(env.APP_URL).origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
+
+async function hasAllowedImageSignature(file: File) {
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+
+  if (file.type === "image/png") {
+    return (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47
+    );
+  }
+
+  if (file.type === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (file.type === "image/webp") {
+    return (
+      bytes[0] === 0x52 &&
+      bytes[1] === 0x49 &&
+      bytes[2] === 0x46 &&
+      bytes[3] === 0x46 &&
+      bytes[8] === 0x57 &&
+      bytes[9] === 0x45 &&
+      bytes[10] === 0x42 &&
+      bytes[11] === 0x50
+    );
+  }
+
+  return false;
+}
 
 function redirectToApp(query: string) {
   const url = new URL(env.APP_URL);

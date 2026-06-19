@@ -67,6 +67,7 @@ export default defineSchema({
     variants: v.array(v.string()),
     chosenText: v.optional(v.string()),
     mediaId: v.optional(v.string()),
+    postingStartedAt: v.optional(v.number()),
     status: v.union(
       v.literal("draft"),
       v.literal("posted"),
