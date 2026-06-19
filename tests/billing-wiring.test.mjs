@@ -149,6 +149,7 @@ test("billing exposes a server-derived current access guard", async () => {
 
 test("home page gates the app by subscription access", async () => {
   const source = await read("app/page.tsx");
+  const draftsWorkspaceSource = await read("components/drafts-workspace.tsx");
 
   assert.match(source, /useQuery\(api\.billing\.currentAccess\)/);
   assert.match(source, /PaywallView/);
@@ -157,8 +158,8 @@ test("home page gates the app by subscription access", async () => {
   assert.match(source, /Start with Better/);
   assert.match(source, /Connected and paid/);
   assert.match(source, /access\.postsThisPeriod\}\/\{access\.postLimit/);
-  assert.match(source, /Upgrade to Better to keep posting this period/);
-  assert.match(source, /Your Better plan renews on/);
+  assert.match(draftsWorkspaceSource, /Upgrade to Better to keep posting this period/);
+  assert.match(draftsWorkspaceSource, /Your Better plan renews on/);
   assert.doesNotMatch(source, /api\.viewer\.current/);
   assert.doesNotMatch(source, /Convex identity/);
 });

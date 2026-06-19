@@ -67,7 +67,7 @@ test("createXPost attaches media ids only when a media id is present", async () 
 });
 
 test("subscriber review screen uploads one optional image with a Convex auth token", async () => {
-  const source = await read("app/page.tsx");
+  const source = await read("components/drafts-workspace.tsx");
 
   assert.match(source, /useAuth/);
   assert.match(source, /getToken\(\{\s*template:\s*"convex"\s*\}\)/s);

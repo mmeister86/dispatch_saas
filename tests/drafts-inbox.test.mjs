@@ -17,28 +17,23 @@ test("drafts query returns the bounded newest-first inbox source", async () => {
   assert.match(source, /\.take\(20\)/);
 });
 
-test("subscriber workspace opens draft detail in a modal from compact inbox rows", async () => {
-  const source = await read("app/page.tsx");
-  const inboxSource = source.slice(
-    source.indexOf("Drafts inbox"),
-    source.indexOf("{selectedDraft ?"),
+test("drafts route opens draft detail on a canvas from repository sidebar rows", async () => {
+  const source = await read("components/drafts-workspace.tsx");
+  const sidebarSource = source.slice(
+    source.indexOf("<aside"),
+    source.indexOf("<DraftEditorCanvas"),
   );
-  const rowButtonSource = inboxSource.slice(
-    inboxSource.indexOf("<button"),
-    inboxSource.indexOf("</button>"),
+  const rowButtonSource = sidebarSource.slice(
+    sidebarSource.indexOf("<button"),
+    sidebarSource.indexOf("</button>"),
   );
 
-  assert.match(source, /Drafts inbox/);
+  assert.match(source, /api\.github\.connectedRepos/);
   assert.match(source, /selectedDraftId/);
   assert.match(source, /setSelectedDraftId\(draft\._id\)/);
-  assert.match(source, /DraftDetailModal/);
-  assert.match(source, /role="dialog"/);
-  assert.match(source, /aria-modal="true"/);
-  assert.match(source, /Escape/);
-  assert.match(source, /previouslyFocusedElement/);
-  assert.match(source, /closeButtonRef\.current\?\.focus\(\)/);
-  assert.match(source, /event\.key === "Tab"/);
-  assert.match(source, /ref=\{dialogRef\}/);
-  assert.match(source, /formatDate\(draft\.createdAt\)/);
+  assert.match(source, /DraftEditorCanvas/);
+  assert.match(source, /groupDraftsByRepo/);
+  assert.match(source, /No commit drafts yet/);
+  assert.doesNotMatch(source, /role="dialog"|aria-modal|fixed inset-0/);
   assert.doesNotMatch(rowButtonSource, /<div/);
 });

@@ -151,11 +151,11 @@ test("drafts query exposes a bounded review list without leaking X tokens", asyn
 });
 
 test("subscriber workspace exposes a minimal draft review and post flow", async () => {
-  const source = await read("app/page.tsx");
+  const source = await read("components/drafts-workspace.tsx");
 
   assert.match(source, /api\.drafts\.listForReview/);
   assert.match(source, /api\.x\.postDraft/);
-  assert.match(source, /DraftReviewPanel/);
+  assert.match(source, /DraftsWorkspace/);
   assert.match(source, /Post to X/);
   assert.match(source, /textarea/);
   assert.match(source, /postingDraftId/);
