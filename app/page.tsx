@@ -43,6 +43,15 @@ type DraftReviewItem = {
   createdAt: number;
 };
 
+type ActiveAccess = {
+  email?: string;
+  plan: "good" | "better";
+  currentPeriodEnd: number;
+  postsThisPeriod: number;
+  postLimit: number;
+  postsRemaining: number;
+};
+
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-12 text-black">
@@ -171,13 +180,10 @@ function PaywallView({ email }: { email: string }) {
 function SubscriberApp({
   access,
 }: {
-  access: {
-    email?: string;
-    plan: "good" | "better";
-    currentPeriodEnd: number;
-    postsThisPeriod: number;
-  };
+  access: ActiveAccess;
 }) {
+  const renewalDate = formatDate(access.currentPeriodEnd);
+
   return (
     <div className="grid gap-5">
       <div className="border border-emerald-200 bg-emerald-50 p-5">
@@ -194,31 +200,33 @@ function SubscriberApp({
 
       <GitHubRepoPanel />
       <XAccountPanel />
-      <DraftReviewPanel />
+      <DraftReviewPanel access={access} />
 
-      <dl className="grid gap-3 border border-black/10 p-5 text-sm sm:grid-cols-3">
+      <dl className="grid gap-3 border border-black/10 p-5 text-sm sm:grid-cols-4">
         <div>
           <dt className="font-medium text-zinc-500">Plan</dt>
           <dd className="mt-1 capitalize">{access.plan}</dd>
         </div>
         <div>
           <dt className="font-medium text-zinc-500">Posts used</dt>
-          <dd className="mt-1">{access.postsThisPeriod}</dd>
+          <dd className="mt-1">
+            {access.postsThisPeriod}/{access.postLimit}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-zinc-500">Remaining</dt>
+          <dd className="mt-1">{access.postsRemaining}</dd>
         </div>
         <div>
           <dt className="font-medium text-zinc-500">Renews</dt>
-          <dd className="mt-1">
-            {new Intl.DateTimeFormat("en", {
-              dateStyle: "medium",
-            }).format(access.currentPeriodEnd)}
-          </dd>
+          <dd className="mt-1">{renewalDate}</dd>
         </div>
       </dl>
     </div>
   );
 }
 
-function DraftReviewPanel() {
+function DraftReviewPanel({ access }: { access: ActiveAccess }) {
   const drafts = useQuery(api.drafts.listForReview);
   const postDraft = useAction(api.x.postDraft);
   const { getToken } = useAuth();
@@ -325,6 +333,12 @@ function DraftReviewPanel() {
     return draftText[draft._id] ?? draft.chosenText ?? draft.variants[0] ?? "";
   }
 
+  const isCapped = access.postsRemaining <= 0;
+  const cappedMessage =
+    access.plan === "good"
+      ? "Upgrade to Better to keep posting this period."
+      : `Your Better plan renews on ${formatDate(access.currentPeriodEnd)}.`;
+
   return (
     <section className="border border-black/10 p-5">
       <div>
@@ -337,6 +351,12 @@ function DraftReviewPanel() {
           helps, then post to X.
         </p>
       </div>
+
+      {isCapped ? (
+        <div className="mt-4 border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+          {cappedMessage}
+        </div>
+      ) : null}
 
       {drafts === undefined ? (
         <p className="mt-4 text-sm text-zinc-500">Loading drafts...</p>
@@ -354,6 +374,7 @@ function DraftReviewPanel() {
               draft.status === "draft" &&
               selectedText.trim().length > 0 &&
               selectedText.trim().length <= 280 &&
+              !isCapped &&
               !isPosting &&
               !isUploading;
 
@@ -455,6 +476,9 @@ function DraftReviewPanel() {
                   </button>
                   {isUploading ? (
                     <p className="text-sm text-zinc-500">Uploading image...</p>
+                  ) : null}
+                  {isCapped ? (
+                    <p className="text-sm text-amber-800">{cappedMessage}</p>
                   ) : null}
                   {noticeByDraftId[draft._id] ? (
                     <p className="text-sm text-emerald-700">
@@ -764,6 +788,12 @@ function clearInstallationQueryParams() {
   url.searchParams.delete("installation_id");
   url.searchParams.delete("setup_action");
   window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
+function formatDate(timestamp: number) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+  }).format(timestamp);
 }
 
 function errorMessage(

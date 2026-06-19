@@ -82,6 +82,57 @@ test("X postDraft refreshes expired tokens, posts text, and stores the X post id
   assert.doesNotMatch(xApiSource, /await response\.text\(\)/);
 });
 
+test("X postDraft reserves monthly post quota before calling X", async () => {
+  const source = await read("convex/x.ts");
+  const postDraftSource = source.slice(
+    source.indexOf("export const postDraft"),
+    source.indexOf("export const completeOAuthCallback"),
+  );
+  const claimDraftPostingSource = source.slice(
+    source.indexOf("export const claimDraftPosting"),
+    source.indexOf("export const clearDraftPosting"),
+  );
+
+  assert.match(source, /from "\.\/planLimits"/);
+  assert.ok(
+    postDraftSource.indexOf("claimDraftPosting") <
+      postDraftSource.indexOf("createXPost"),
+  );
+  assert.match(claimDraftPostingSource, /getActiveSubscriptionForPosting/);
+  assert.match(claimDraftPostingSource, /postLimitForPlan\(subscription\.plan\)/);
+  assert.match(claimDraftPostingSource, /effectivePostsThisPeriodForSubscription\(ctx,\s*subscription\)/);
+  assert.match(claimDraftPostingSource, /effectivePostsThisPeriod >= postLimit/);
+  assert.match(claimDraftPostingSource, /Upgrade to Better to keep posting this period/);
+  assert.match(claimDraftPostingSource, /postsThisPeriod:\s*effectivePostsThisPeriod \+ 1/);
+  assert.match(claimDraftPostingSource, /subscriptionId:\s*subscription\._id/);
+  assert.match(claimDraftPostingSource, /subscriptionPeriodEnd:\s*subscription\.currentPeriodEnd/);
+});
+
+test("failed X post releases the monthly post quota reservation", async () => {
+  const source = await read("convex/x.ts");
+  const postDraftSource = source.slice(
+    source.indexOf("export const postDraft"),
+    source.indexOf("export const completeOAuthCallback"),
+  );
+  const clearDraftPostingSource = source.slice(
+    source.indexOf("export const clearDraftPosting"),
+    source.indexOf("export const markDraftPosted"),
+  );
+
+  assert.match(postDraftSource, /subscriptionId:\s*claimedDraft\.subscriptionId/);
+  assert.match(postDraftSource, /subscriptionPeriodEnd:\s*claimedDraft\.subscriptionPeriodEnd/);
+  assert.match(clearDraftPostingSource, /subscriptionId:\s*v\.id\("subscriptions"\)/);
+  assert.match(clearDraftPostingSource, /subscriptionPeriodEnd:\s*v\.number\(\)/);
+  assert.match(clearDraftPostingSource, /ctx\.db\.get\(args\.subscriptionId\)/);
+  assert.match(clearDraftPostingSource, /if \(!draft\.postingStartedAt\) \{\s*return null;\s*\}/s);
+  assert.match(clearDraftPostingSource, /subscription\.currentPeriodEnd === args\.subscriptionPeriodEnd/);
+  assert.match(clearDraftPostingSource, /Math\.max\(0,\s*subscription\.postsThisPeriod - 1\)/);
+  assert.doesNotMatch(source.slice(
+    source.indexOf("export const markDraftPosted"),
+    source.indexOf("export const recoverPostedDraftRecord"),
+  ), /postsThisPeriod:\s*.*\+/);
+});
+
 test("drafts query exposes a bounded review list without leaking X tokens", async () => {
   assert.equal(await pathExists("convex/drafts.ts"), true);
 

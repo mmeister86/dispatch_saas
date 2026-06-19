@@ -400,6 +400,11 @@ export const upsertSubscriptionFromWebhook = internalMutation({
       .unique();
 
     if (existing) {
+      const postsThisPeriod =
+        existing.currentPeriodEnd === args.currentPeriodEnd
+          ? existing.postsThisPeriod
+          : 0;
+
       await ctx.db.replace(existing._id, {
         userId: args.userId,
         lemonCustomerId: args.lemonCustomerId,
@@ -407,7 +412,7 @@ export const upsertSubscriptionFromWebhook = internalMutation({
         plan: args.plan,
         status: args.status,
         currentPeriodEnd: args.currentPeriodEnd,
-        postsThisPeriod: existing.postsThisPeriod,
+        postsThisPeriod,
       });
       return null;
     }
