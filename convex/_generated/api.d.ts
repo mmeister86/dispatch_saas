@@ -16,6 +16,7 @@ import type * as generationCore from "../generationCore.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as planLimits from "../planLimits.js";
+import type * as rateLimits from "../rateLimits.js";
 import type * as viewer from "../viewer.js";
 import type * as x from "../x.js";
 import type * as xApi from "../xApi.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   github: typeof github;
   http: typeof http;
   planLimits: typeof planLimits;
+  rateLimits: typeof rateLimits;
   viewer: typeof viewer;
   x: typeof x;
   xApi: typeof xApi;
@@ -68,4 +70,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
 };

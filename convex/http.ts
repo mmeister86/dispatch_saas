@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { rateLimiter } from "./rateLimits";
 import { uploadTweetImage } from "./xApi";
 import { env, httpAction, internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -454,6 +455,14 @@ export const createDraftFromGithubPushWebhook = internalMutation({
         .take(1);
 
       if (existingDraft.length > 0) {
+        continue;
+      }
+
+      const generationLimit = await rateLimiter.limit(ctx, "generateDraftVariants", {
+        key: repo.userId,
+      });
+
+      if (!generationLimit.ok) {
         continue;
       }
 
