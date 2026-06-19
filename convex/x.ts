@@ -9,8 +9,12 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
+import {
+  effectivePostsThisPeriodForSubscription,
+  postLimitForPlan,
+} from "./planLimits";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
@@ -155,6 +159,8 @@ export const postDraft = action({
       await ctx.runMutation(internal.x.clearDraftPosting, {
         draftId: args.draftId,
         userId: refreshedContext.userId,
+        subscriptionId: claimedDraft.subscriptionId,
+        subscriptionPeriodEnd: claimedDraft.subscriptionPeriodEnd,
       });
       throw err;
     }
@@ -495,6 +501,8 @@ export const claimDraftPosting = internalMutation({
   },
   returns: v.object({
     mediaId: v.optional(v.string()),
+    subscriptionId: v.id("subscriptions"),
+    subscriptionPeriodEnd: v.number(),
   }),
   handler: async (ctx, args) => {
     const draft = await ctx.db.get(args.draftId);
@@ -511,12 +519,35 @@ export const claimDraftPosting = internalMutation({
       throw new Error("This draft is already being posted.");
     }
 
+    const subscription = await getActiveSubscriptionForPosting(
+      ctx,
+      args.userId,
+      args.now,
+    );
+    const effectivePostsThisPeriod =
+      await effectivePostsThisPeriodForSubscription(ctx, subscription);
+    const postLimit = postLimitForPlan(subscription.plan);
+
+    if (effectivePostsThisPeriod >= postLimit) {
+      if (subscription.plan === "good") {
+        throw new Error("Upgrade to Better to keep posting this period.");
+      }
+
+      throw new Error("You have used all posts in this billing period.");
+    }
+
+    await ctx.db.patch(subscription._id, {
+      postsThisPeriod: effectivePostsThisPeriod + 1,
+    });
+
     await ctx.db.patch(args.draftId, {
       chosenText: args.chosenText,
       postingStartedAt: args.now,
     });
 
     return {
+      subscriptionId: subscription._id,
+      subscriptionPeriodEnd: subscription.currentPeriodEnd,
       ...(draft.mediaId ? { mediaId: draft.mediaId } : {}),
     };
   },
@@ -526,6 +557,8 @@ export const clearDraftPosting = internalMutation({
   args: {
     draftId: v.id("drafts"),
     userId: v.id("users"),
+    subscriptionId: v.id("subscriptions"),
+    subscriptionPeriodEnd: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -537,6 +570,22 @@ export const clearDraftPosting = internalMutation({
 
     if (draft.status !== "draft") {
       return null;
+    }
+
+    if (!draft.postingStartedAt) {
+      return null;
+    }
+
+    const subscription = await ctx.db.get(args.subscriptionId);
+
+    if (
+      subscription !== null &&
+      subscription.userId === args.userId &&
+      subscription.currentPeriodEnd === args.subscriptionPeriodEnd
+    ) {
+      await ctx.db.patch(args.subscriptionId, {
+        postsThisPeriod: Math.max(0, subscription.postsThisPeriod - 1),
+      });
     }
 
     await ctx.db.patch(args.draftId, {
@@ -719,6 +768,29 @@ async function getSubscribedUserByTokenIdentifier(
   }
 
   return user;
+}
+
+async function getActiveSubscriptionForPosting(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  now: number,
+): Promise<Doc<"subscriptions">> {
+  const activeSubscriptions = await ctx.db
+    .query("subscriptions")
+    .withIndex("by_userId_and_status_and_currentPeriodEnd", (q) =>
+      q
+        .eq("userId", userId)
+        .eq("status", "active")
+        .gt("currentPeriodEnd", now),
+    )
+    .take(1);
+  const subscription = activeSubscriptions[0] ?? null;
+
+  if (subscription === null) {
+    throw new Error("Subscribe before posting.");
+  }
+
+  return subscription;
 }
 
 async function requestToken(params: Record<string, string>) {

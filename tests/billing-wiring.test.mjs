@@ -93,7 +93,18 @@ test("subscription webhook upserts Lemon Squeezy state by subscription id", asyn
   assert.match(source, /parseLemonDate\(periodEndForStatus\(attributes\)\)/);
   assert.match(source, /v\.literal\("active"\)/);
   assert.match(source, /postsThisPeriod:\s*0/);
-  assert.match(source, /postsThisPeriod:\s*existing\.postsThisPeriod/);
+  assert.match(source, /existing\.postsThisPeriod/);
+});
+
+test("subscription webhook resets post usage when the billing period changes", async () => {
+  const source = await read("convex/http.ts");
+  const upsertSource = source.slice(
+    source.indexOf("export const upsertSubscriptionFromWebhook"),
+    source.indexOf("export const createDraftFromGithubPushWebhook"),
+  );
+
+  assert.match(upsertSource, /const postsThisPeriod =\s*existing\.currentPeriodEnd === args\.currentPeriodEnd\s*\?\s*existing\.postsThisPeriod\s*:\s*0/s);
+  assert.match(upsertSource, /postsThisPeriod,\s*\}\);/);
 });
 
 test("home page exposes signed-in Good and Better checkout buttons", async () => {
@@ -107,6 +118,7 @@ test("home page exposes signed-in Good and Better checkout buttons", async () =>
 
 test("billing exposes a server-derived current access guard", async () => {
   const source = await read("convex/billing.ts");
+  const planLimitsSource = await read("convex/planLimits.ts");
   const currentAccessSource = source.slice(
     source.indexOf("export const currentAccess"),
     source.indexOf("export const createCheckout"),
@@ -126,6 +138,13 @@ test("billing exposes a server-derived current access guard", async () => {
   assert.match(source, /state:\s*"signedOut"/);
   assert.match(source, /state:\s*"needsSubscription"/);
   assert.match(source, /state:\s*"active"/);
+  assert.match(source, /postLimitForPlan\(subscription\.plan\)/);
+  assert.match(currentAccessSource, /postLimit:/);
+  assert.match(currentAccessSource, /postsRemaining:/);
+  assert.match(currentAccessSource, /effectivePostsThisPeriodForSubscription\(ctx,\s*subscription\)/);
+  assert.match(planLimitsSource, /status",\s*"posted"/);
+  assert.match(planLimitsSource, /monthlyPeriodStartForEnd\(subscription\.currentPeriodEnd\)/);
+  assert.match(planLimitsSource, /Math\.max\(subscription\.postsThisPeriod,\s*postedThisPeriod\)/);
 });
 
 test("home page gates the app by subscription access", async () => {
@@ -137,6 +156,9 @@ test("home page gates the app by subscription access", async () => {
   assert.match(source, /Start with Good/);
   assert.match(source, /Start with Better/);
   assert.match(source, /Connected and paid/);
+  assert.match(source, /access\.postsThisPeriod\}\/\{access\.postLimit/);
+  assert.match(source, /Upgrade to Better to keep posting this period/);
+  assert.match(source, /Your Better plan renews on/);
   assert.doesNotMatch(source, /api\.viewer\.current/);
   assert.doesNotMatch(source, /Convex identity/);
 });

@@ -7,10 +7,14 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
+import {
+  effectivePostsThisPeriodForSubscription,
+  postLimitForPlan,
+  postsRemainingForPlan,
+} from "./planLimits";
 import type { Id } from "./_generated/dataModel";
+import type { Plan } from "./planLimits";
 import type { QueryCtx } from "./_generated/server";
-
-type Plan = "good" | "better";
 
 export const currentAccess = query({
   args: {},
@@ -28,6 +32,8 @@ export const currentAccess = query({
       plan: v.union(v.literal("good"), v.literal("better")),
       currentPeriodEnd: v.number(),
       postsThisPeriod: v.number(),
+      postLimit: v.number(),
+      postsRemaining: v.number(),
     }),
   ),
   handler: async (ctx) => {
@@ -60,12 +66,21 @@ export const currentAccess = query({
       };
     }
 
+    const effectivePostsThisPeriod =
+      await effectivePostsThisPeriodForSubscription(ctx, subscription);
+    const postLimit = postLimitForPlan(subscription.plan);
+
     return {
       state: "active" as const,
       email: user.email,
       plan: subscription.plan,
       currentPeriodEnd: subscription.currentPeriodEnd,
-      postsThisPeriod: subscription.postsThisPeriod,
+      postsThisPeriod: effectivePostsThisPeriod,
+      postLimit,
+      postsRemaining: postsRemainingForPlan(
+        subscription.plan,
+        effectivePostsThisPeriod,
+      ),
     };
   },
 });
