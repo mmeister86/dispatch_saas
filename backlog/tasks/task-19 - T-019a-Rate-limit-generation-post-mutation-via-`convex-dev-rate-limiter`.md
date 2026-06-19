@@ -1,11 +1,11 @@
 ---
 id: TASK-19
 title: 'T-019a: Rate-limit generation + post mutation via `@convex-dev/rate-limiter`'
-status: In Progress
+status: Done
 assignee:
   - codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-19 11:32'
+updated_date: '2026-06-19 11:57'
 labels:
   - imported-from-docs
   - phase-2
@@ -72,3 +72,25 @@ Verification:
 
 Task remains In Progress pending user confirmation before Done.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+## Summary
+- Added the official @convex-dev/rate-limiter component and registered it in Convex.
+- Added shared balanced per-user limits for webhook-triggered draft generation and X posting.
+- Protected GitHub push generation after duplicate checks with silent skip behavior, and protected X posting before token refresh, quota reservation, and X API calls while preserving the monthly post cap.
+
+## Verification
+- RED: pnpm test tests/rate-limiter-wiring.test.mjs failed before implementation because the package, shared rateLimits module, and wiring were missing.
+- GREEN: pnpm test tests/rate-limiter-wiring.test.mjs passed 4/4.
+- Regression: pnpm test passed 62/62.
+- Typecheck: pnpm exec tsc --noEmit exited 0.
+- Lint: pnpm lint exited 0 with 4 existing/generated-file warnings about unused eslint-disable directives.
+- Code review subagent found no issues.
+
+## Notes
+- Generation throttling is intentionally silent for webhook replay to avoid retry storms.
+- Posting throttling returns the user-facing retry message from the action.
+- Tests are static wiring/order tests rather than live Convex component integration tests.
+<!-- SECTION:FINAL_SUMMARY:END -->
