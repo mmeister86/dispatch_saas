@@ -40,6 +40,9 @@ test("/drafts route renders the routed drafts workspace", async () => {
   assert.match(workspaceSource, /rounded-\[28px\]/);
   assert.match(workspaceSource, /shadow-\[0_24px_80px_rgba\(15,23,42,0\.18\)\]/);
   assert.match(workspaceSource, /aria-pressed=\{isSelected\}/);
+  assert.match(workspaceSource, /lg:grid-cols-\[minmax\(360px,380px\)_minmax\(0,1fr\)\]/);
+  assert.match(workspaceSource, /break-words/);
+  assert.doesNotMatch(workspaceSource, /truncate/);
   assert.doesNotMatch(workspaceSource, /role="dialog"|aria-modal|fixed inset-0/);
 });
 

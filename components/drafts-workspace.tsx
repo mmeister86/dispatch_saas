@@ -235,10 +235,10 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
 
   return (
     <main className="min-h-screen bg-[#f3efe7] p-3 text-[#181411] sm:p-5 lg:p-7">
-      <div className="grid min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[28px] bg-[#fffaf2] shadow-[0_24px_80px_rgba(15,23,42,0.18)] ring-1 ring-[#d8cebf] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-3.5rem)] lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="bg-[#171411] text-white lg:min-h-full">
+      <div className="grid min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[28px] bg-[#fffaf2] shadow-[0_24px_80px_rgba(15,23,42,0.18)] ring-1 ring-[#d8cebf] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-3.5rem)] lg:grid-cols-[minmax(360px,380px)_minmax(0,1fr)]">
+        <aside className="min-w-0 bg-[#171411] text-white lg:min-h-full">
           <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 lg:px-6 lg:py-7">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase text-[#69d4a1]">
                 Dispatch
               </p>
@@ -267,7 +267,7 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
               from the workspace.
             </p>
           ) : (
-            <div className="grid max-h-[44vh] gap-2 overflow-y-auto px-3 py-4 lg:max-h-[calc(100vh-156px)] lg:px-4">
+            <div className="grid max-h-[44vh] min-w-0 gap-2 overflow-y-auto px-3 py-4 lg:max-h-[calc(100vh-156px)] lg:px-4">
               {repoSections.map((repo) => (
                 <RepoDraftGroup
                   drafts={draftGroups.get(repo.fullName) ?? []}
@@ -339,7 +339,7 @@ function RepoDraftGroup({
   setSelectedDraftId: (draftId: string) => void;
 }) {
   return (
-    <section className="rounded-2xl px-2 py-3">
+    <section className="min-w-0 rounded-2xl px-2 py-3">
       <h2 className="break-words px-2 text-sm font-semibold tracking-normal text-white/90">
         {repo.fullName}
       </h2>
@@ -356,7 +356,7 @@ function RepoDraftGroup({
             return (
               <button
                 aria-pressed={isSelected}
-                className={`w-full rounded-2xl border px-3.5 py-3 text-left text-sm transition-all ${
+                className={`w-full min-w-0 rounded-2xl border px-3.5 py-3 text-left text-sm transition-all ${
                   isSelected
                     ? "border-[#f5d08a] bg-[#fff1d4] text-[#171411] shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
                     : "border-white/5 bg-white/[0.04] text-white/70 hover:border-white/15 hover:bg-white/[0.08] hover:text-white"
@@ -365,7 +365,7 @@ function RepoDraftGroup({
                 onClick={() => setSelectedDraftId(draft._id)}
                 type="button"
               >
-                <span className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center justify-between gap-3">
                   <span className="font-semibold">
                     {draft.commitSha.slice(0, 7)}
                   </span>
@@ -379,7 +379,7 @@ function RepoDraftGroup({
                     {draft.status}
                   </span>
                 </span>
-                <span className="mt-2 block truncate text-xs leading-5 opacity-75">
+                <span className="mt-2 block break-words text-xs leading-5 opacity-75">
                   {draft.commitMessage}
                 </span>
               </button>
