@@ -36,6 +36,10 @@ test("/drafts route renders the routed drafts workspace", async () => {
   assert.match(workspaceSource, /unmatchedDraftRepoNames/);
   assert.match(workspaceSource, /Array\.from\(draftGroups\.keys\(\)\)/);
   assert.match(workspaceSource, /aria-label="Post text"/);
+  assert.match(workspaceSource, /bg-\[#f3efe7\]/);
+  assert.match(workspaceSource, /rounded-\[28px\]/);
+  assert.match(workspaceSource, /shadow-\[0_24px_80px_rgba\(15,23,42,0\.18\)\]/);
+  assert.match(workspaceSource, /aria-pressed=\{isSelected\}/);
   assert.doesNotMatch(workspaceSource, /role="dialog"|aria-modal|fixed inset-0/);
 });
 

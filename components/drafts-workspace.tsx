@@ -40,26 +40,30 @@ export function DraftsWorkspace() {
 
   if (access === undefined) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
-        <p className="text-sm text-zinc-400">Loading drafts workspace...</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#f3efe7] px-6 text-[#181411]">
+        <p className="text-sm font-medium text-[#786f64]">
+          Loading drafts workspace...
+        </p>
       </main>
     );
   }
 
   if (access.state !== "active") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
-        <section className="w-full max-w-md border border-white/15 bg-white p-6 text-black">
-          <p className="text-sm font-medium text-zinc-500">Drafts workspace</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#f3efe7] px-6 text-[#181411]">
+        <section className="w-full max-w-md rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+          <p className="text-sm font-semibold text-[#2f8a67]">
+            Drafts workspace
+          </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal">
             Subscribe before reviewing drafts.
           </h1>
-          <p className="mt-3 text-sm leading-6 text-zinc-700">
+          <p className="mt-3 text-sm leading-6 text-[#625a51]">
             Return to the Dispatch workspace to choose a plan and connect your
             accounts.
           </p>
           <Link
-            className="mt-5 inline-flex h-10 items-center border border-black bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
             href="/"
           >
             Back to workspace
@@ -230,32 +234,40 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
       : `Your Better plan renews on ${formatDate(access.currentPeriodEnd)}.`;
 
   return (
-    <main className="min-h-screen bg-zinc-950 p-4 text-white sm:p-6">
-      <div className="grid min-h-[calc(100vh-2rem)] overflow-hidden border border-dashed border-white/55 lg:grid-cols-[280px_1fr]">
-        <aside className="border-b border-dashed border-white/45 bg-zinc-950 lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-4 border-b border-dashed border-white/45 px-5 py-4">
+    <main className="min-h-screen bg-[#f3efe7] p-3 text-[#181411] sm:p-5 lg:p-7">
+      <div className="grid min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[28px] bg-[#fffaf2] shadow-[0_24px_80px_rgba(15,23,42,0.18)] ring-1 ring-[#d8cebf] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-3.5rem)] lg:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="bg-[#171411] text-white lg:min-h-full">
+          <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 lg:px-6 lg:py-7">
             <div>
-              <p className="text-sm font-medium text-emerald-300">Dispatch</p>
-              <h1 className="mt-1 text-xl font-semibold tracking-normal">
+              <p className="text-xs font-semibold uppercase text-[#69d4a1]">
+                Dispatch
+              </p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-normal">
                 Drafts
               </h1>
+              <p className="mt-2 text-xs leading-5 text-white/50">
+                Pick a commit, tune the post, ship it.
+              </p>
             </div>
-            <Link className="text-sm text-zinc-300 underline" href="/">
+            <Link
+              className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
+              href="/"
+            >
               Home
             </Link>
           </div>
 
           {isLoading ? (
-            <p className="px-5 py-4 text-sm text-zinc-400">
+            <p className="px-6 py-5 text-sm text-white/50">
               Loading repositories...
             </p>
           ) : repoSections.length === 0 ? (
-            <p className="px-5 py-4 text-sm leading-6 text-zinc-400">
+            <p className="px-6 py-5 text-sm leading-6 text-white/50">
               No connected repositories or commit drafts yet. Connect a repo
               from the workspace.
             </p>
           ) : (
-            <div className="grid max-h-[42vh] overflow-y-auto lg:max-h-[calc(100vh-112px)]">
+            <div className="grid max-h-[44vh] gap-2 overflow-y-auto px-3 py-4 lg:max-h-[calc(100vh-156px)] lg:px-4">
               {repoSections.map((repo) => (
                 <RepoDraftGroup
                   drafts={draftGroups.get(repo.fullName) ?? []}
@@ -269,7 +281,7 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
           )}
         </aside>
 
-        <section className="flex min-h-[70vh] items-start justify-center overflow-y-auto bg-zinc-950 px-4 py-6 sm:px-8 lg:px-12">
+        <section className="flex min-h-[70vh] items-start justify-center overflow-y-auto bg-[#f3efe7] px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
           {selectedDraft ? (
             <DraftEditorCanvas
               cappedMessage={cappedMessage}
@@ -296,12 +308,14 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
               selectedText={selectedTextForDraft(selectedDraft)}
             />
           ) : (
-            <div className="w-full max-w-3xl border border-white/15 bg-white p-6 text-black">
-              <p className="text-sm font-medium text-zinc-500">Draft detail</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-normal">
+            <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+              <p className="text-sm font-semibold text-[#2f8a67]">
+                Draft detail
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-normal">
                 Select a commit draft.
               </h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-700">
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
                 Choose a commit from the sidebar to review variants, edit the
                 post, attach an image, and publish to X.
               </p>
@@ -325,39 +339,48 @@ function RepoDraftGroup({
   setSelectedDraftId: (draftId: string) => void;
 }) {
   return (
-    <section className="border-b border-dashed border-white/45 px-5 py-5">
-      <h2 className="break-words text-lg font-semibold tracking-normal">
+    <section className="rounded-2xl px-2 py-3">
+      <h2 className="break-words px-2 text-sm font-semibold tracking-normal text-white/90">
         {repo.fullName}
       </h2>
 
       {drafts.length === 0 ? (
-        <p className="mt-4 text-sm leading-6 text-zinc-500">
+        <p className="mt-3 px-2 text-xs leading-5 text-white/35">
           No commit drafts yet.
         </p>
       ) : (
-        <div className="mt-4 grid gap-2">
+        <div className="mt-3 grid gap-2">
           {drafts.map((draft) => {
             const isSelected = selectedDraftId === draft._id;
 
             return (
               <button
-                className={`w-full border px-3 py-2 text-left text-sm transition-colors ${
+                aria-pressed={isSelected}
+                className={`w-full rounded-2xl border px-3.5 py-3 text-left text-sm transition-all ${
                   isSelected
-                    ? "border-white bg-white text-black"
-                    : "border-transparent text-zinc-300 hover:border-white/30 hover:bg-white/10 hover:text-white"
+                    ? "border-[#f5d08a] bg-[#fff1d4] text-[#171411] shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
+                    : "border-white/5 bg-white/[0.04] text-white/70 hover:border-white/15 hover:bg-white/[0.08] hover:text-white"
                 }`}
                 key={draft._id}
                 onClick={() => setSelectedDraftId(draft._id)}
                 type="button"
               >
-                <span className="block font-medium">
-                  {draft.commitSha.slice(0, 7)}
+                <span className="flex items-center justify-between gap-3">
+                  <span className="font-semibold">
+                    {draft.commitSha.slice(0, 7)}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
+                      isSelected
+                        ? "bg-[#171411] text-white"
+                        : "bg-white/10 text-white/60"
+                    }`}
+                  >
+                    {draft.status}
+                  </span>
                 </span>
-                <span className="mt-1 block truncate text-xs opacity-75">
+                <span className="mt-2 block truncate text-xs leading-5 opacity-75">
                   {draft.commitMessage}
-                </span>
-                <span className="mt-2 block text-xs capitalize opacity-65">
-                  {draft.status}
                 </span>
               </button>
             );
@@ -404,35 +427,40 @@ function DraftEditorCanvas({
     !isUploading;
 
   return (
-    <article className="w-full max-w-3xl border border-zinc-300 bg-white p-6 text-black">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <article className="w-full max-w-4xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
+      <div className="flex flex-col gap-4 border-b border-[#e7ded0] pb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-500">Draft detail</p>
-          <h2 className="mt-2 break-words text-2xl font-semibold tracking-normal">
+          <p className="text-xs font-semibold uppercase text-[#2f8a67]">
+            Draft detail
+          </p>
+          <h2 className="mt-2 break-words text-3xl font-semibold tracking-normal text-[#181411]">
             {draft.repoFullName}
           </h2>
-          <p className="mt-1 break-words text-xs text-zinc-500">
+          <p className="mt-2 break-words text-sm text-[#7b7166]">
             {draft.commitSha.slice(0, 7)} · {draft.commitMessage}
           </p>
         </div>
+        <span className="w-fit rounded-full border border-[#ded4c5] bg-[#f8f2e9] px-3 py-1 text-xs font-semibold capitalize text-[#625a51]">
+          {draft.status}
+        </span>
       </div>
 
       {draft.status === "posted" && draft.xPostId ? (
-        <p className="mt-4 text-xs font-medium text-emerald-700">
+        <p className="mt-5 rounded-2xl border border-[#bfe5d1] bg-[#ebf8ef] px-4 py-3 text-sm font-semibold text-[#1c7d53]">
           Posted: {draft.xPostId}
         </p>
       ) : null}
 
       {draft.variants.length === 0 ? (
-        <p className="mt-5 text-sm text-zinc-500">Generating variants...</p>
+        <p className="mt-6 text-sm text-[#7b7166]">Generating variants...</p>
       ) : (
-        <div className="mt-5 grid gap-2">
-          <p className="text-sm font-medium text-zinc-900">
+        <div className="mt-6 grid gap-3">
+          <p className="text-sm font-semibold text-[#181411]">
             Choose a variant
           </p>
           {draft.variants.map((variant) => (
             <button
-              className="border border-black/10 p-4 text-left text-sm leading-6 text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border border-[#e5dbcb] bg-[#fffaf2] p-4 text-left text-sm leading-6 text-[#625a51] transition-all hover:-translate-y-0.5 hover:border-[#d4c6b3] hover:bg-white hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
               disabled={draft.status !== "draft"}
               key={variant}
               onClick={() => onSelectVariant(variant)}
@@ -446,35 +474,37 @@ function DraftEditorCanvas({
 
       <textarea
         aria-label="Post text"
-        className="mt-5 min-h-32 w-full resize-y border border-black/20 p-4 text-sm leading-6 outline-none focus:border-black disabled:cursor-not-allowed disabled:bg-zinc-50"
+        className="mt-6 min-h-36 w-full resize-y rounded-2xl border border-[#d8cebf] bg-white p-5 text-base leading-7 text-[#181411] outline-none transition-colors placeholder:text-[#a79c90] focus:border-[#181411] disabled:cursor-not-allowed disabled:bg-[#f7f1e8]"
         disabled={draft.status !== "draft"}
         maxLength={280}
         onChange={(event) => onTextChange(event.target.value)}
         value={selectedText}
       />
-      <p className="mt-1 text-xs text-zinc-500">{selectedText.length}/280</p>
+      <p className="mt-2 text-right text-xs font-medium text-[#7b7166]">
+        {selectedText.length}/280
+      </p>
 
-      <div className="mt-5 grid gap-3">
+      <div className="mt-6 grid gap-3 rounded-2xl border border-[#e5dbcb] bg-[#f8f2e9] p-4">
         <label className="block text-sm">
-          <span className="font-medium text-zinc-900">Optional image</span>
+          <span className="font-semibold text-[#181411]">Optional image</span>
           <input
             accept="image/png,image/jpeg,image/webp"
-            className="mt-2 block w-full text-sm"
+            className="mt-3 block w-full text-sm text-[#625a51] file:mr-4 file:rounded-full file:border-0 file:bg-[#181411] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
             disabled={draft.status !== "draft" || isUploading}
             onChange={(event) => onUpload(event.currentTarget.files?.[0] ?? null)}
             type="file"
           />
         </label>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[#7b7166]">
           {draft.mediaId
             ? `Attached media ${draft.mediaId}.`
             : "Text-only remains ready."}
         </p>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
-          className="h-10 border border-black bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-11 rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!canPost}
           onClick={onPost}
           type="button"
@@ -482,16 +512,22 @@ function DraftEditorCanvas({
           {isPosting ? "Posting..." : "Post to X"}
         </button>
         {isUploading ? (
-          <p className="text-sm text-zinc-500">Uploading image...</p>
+          <p className="text-sm text-[#7b7166]">Uploading image...</p>
         ) : null}
         {isCapped ? (
-          <p className="text-sm text-amber-800">{cappedMessage}</p>
+          <p className="rounded-full bg-[#fff1d4] px-3 py-1.5 text-sm font-semibold text-[#8a5515]">
+            {cappedMessage}
+          </p>
         ) : null}
-        {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+        {notice ? (
+          <p className="rounded-full bg-[#ebf8ef] px-3 py-1.5 text-sm font-semibold text-[#1c7d53]">
+            {notice}
+          </p>
+        ) : null}
       </div>
 
       {error ? (
-        <div className="mt-5 border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
           {error}
         </div>
       ) : null}
