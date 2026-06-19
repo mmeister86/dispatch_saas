@@ -1,11 +1,11 @@
 ---
 id: TASK-13
 title: 'T-015: Generation engine: commit → 2–3 BIP variants (Twitter/X Engager prompt)'
-status: In Progress
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-18 19:22'
+updated_date: '2026-06-18 20:09'
 labels:
   - imported-from-docs
   - phase-2
@@ -13,7 +13,7 @@ labels:
 dependencies: []
 references:
   - .docs/backlog.md
-ordinal: 1000
+ordinal: 15000
 ---
 
 ## Description
@@ -59,3 +59,9 @@ Build the commit-to-BIP-variant engine as a Convex-only internal action using Ve
 <!-- SECTION:NOTES:BEGIN -->
 Implemented TASK-13 generation engine on branch codex/task-13-generation-engine. Added Vercel AI SDK dependencies (`ai`, `@ai-sdk/openai`, `zod`), Convex env typing for `OPENAI_API_KEY` and `AI_MODEL`, pure generation helpers in `convex/generationCore.ts`, and an internal Convex action in `convex/generation.ts` using `generateObject` with a Zod schema. The runtime prompt is curated from the local Twitter Engager persona and Dispatch docs; it does not read local agent files at runtime. Added deterministic commit-message truncation to bound LLM input cost/risk after code review. Verification: `pnpm test` passed 37/37; `pnpm exec tsc --noEmit` exited 0; `pnpm lint` exited 0 with 4 existing warnings in Convex generated files. Twitter Engager review found no Critical/Important issues; Code Reviewer found no blockers and the two actionable Important items were addressed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+TASK-13 shipped the Convex internal generation engine for commit-message to 2-3 BIP-style X variants. The implementation added pure generation helpers, curated Twitter Engager prompt guidance, Vercel AI SDK structured output, and an internal action without runtime reads from local agent files. Verified during implementation with `pnpm test`, `pnpm exec tsc --noEmit`, and `pnpm lint`; lint warnings were pre-existing generated Convex warnings.
+<!-- SECTION:FINAL_SUMMARY:END -->

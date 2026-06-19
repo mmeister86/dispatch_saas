@@ -37,6 +37,9 @@ type Env = {
   readonly LEMONSQUEEZY_STORE_ID: string;
   readonly LEMONSQUEEZY_WEBHOOK_SECRET: string;
   readonly OPENAI_API_KEY: string;
+  readonly X_CLIENT_ID: string;
+  readonly X_CLIENT_SECRET: string;
+  readonly X_OAUTH_REDIRECT_URI: string;
 };
 
 /**

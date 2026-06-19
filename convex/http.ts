@@ -6,6 +6,8 @@ import type { Id } from "./_generated/dataModel";
 
 const http = httpRouter();
 const MAX_CONNECTED_REPOS_PER_PUSH = 100;
+const OAUTH_STATE_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+const OAUTH_CODE_MAX_LENGTH = 1024;
 
 http.route({
   path: "/github/webhook",
@@ -57,6 +59,34 @@ http.route({
     });
 
     return new Response("OK", { status: 200 });
+  }),
+});
+
+http.route({
+  path: "/x/oauth/callback",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    const error = url.searchParams.get("error");
+
+    if (
+      error !== null ||
+      code === null ||
+      state === null ||
+      code.length > OAUTH_CODE_MAX_LENGTH ||
+      !OAUTH_STATE_PATTERN.test(state)
+    ) {
+      return redirectToApp("x=error");
+    }
+
+    try {
+      await ctx.runAction(internal.x.completeOAuthCallback, { code, state });
+      return redirectToApp("x=connected");
+    } catch {
+      return redirectToApp("x=error");
+    }
   }),
 });
 
@@ -120,6 +150,20 @@ http.route({
     return new Response("OK", { status: 200 });
   }),
 });
+
+function redirectToApp(query: string) {
+  const url = new URL(env.APP_URL);
+  url.search = query;
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: url.toString(),
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
 
 async function isValidGithubSignature(rawBody: string, signature: string) {
   if (!signature.startsWith("sha256=")) {

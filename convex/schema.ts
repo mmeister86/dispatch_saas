@@ -10,6 +10,8 @@ export default defineSchema({
     xAccessToken: v.optional(v.string()),
     xRefreshToken: v.optional(v.string()),
     xConnectedAt: v.optional(v.number()),
+    xTokenExpiresAt: v.optional(v.number()),
+    xUsername: v.optional(v.string()),
   })
     .index("by_clerkTokenIdentifier", ["clerkTokenIdentifier"])
     .index("by_email", ["email"])
@@ -77,4 +79,13 @@ export default defineSchema({
     .index("by_userId_and_status", ["userId", "status"])
     .index("by_repoId_and_commitSha", ["repoId", "commitSha"])
     .index("by_status", ["status"]),
+
+  xOAuthStates: defineTable({
+    state: v.string(),
+    codeVerifier: v.string(),
+    userId: v.id("users"),
+    expiresAt: v.number(),
+  })
+    .index("by_state", ["state"])
+    .index("by_userId", ["userId"]),
 });

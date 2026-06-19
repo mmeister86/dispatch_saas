@@ -16,6 +16,9 @@ const app = defineApp({
     GITHUB_WEBHOOK_SECRET: v.string(),
     OPENAI_API_KEY: v.string(),
     AI_MODEL: v.string(),
+    X_CLIENT_ID: v.string(),
+    X_CLIENT_SECRET: v.string(),
+    X_OAUTH_REDIRECT_URI: v.string(),
   },
 });
 app.use(resend);

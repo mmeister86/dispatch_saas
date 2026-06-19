@@ -177,6 +177,7 @@ function SubscriberApp({
       </div>
 
       <GitHubRepoPanel />
+      <XAccountPanel />
 
       <dl className="grid gap-3 border border-black/10 p-5 text-sm sm:grid-cols-3">
         <div>
@@ -197,6 +198,72 @@ function SubscriberApp({
         </div>
       </dl>
     </div>
+  );
+}
+
+function XAccountPanel() {
+  const status = useQuery(api.x.connectionStatus);
+  const startConnection = useAction(api.x.startConnection);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConnectX() {
+    setIsConnecting(true);
+    setError(null);
+
+    try {
+      const connection = await startConnection({});
+      window.location.assign(connection.url);
+    } catch (err) {
+      setError(errorMessage(err, "X connection failed. Try again."));
+      setIsConnecting(false);
+    }
+  }
+
+  return (
+    <section className="border border-black/10 p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-500">X account</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-normal">
+            Connect X account
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-700">
+            Dispatch posts approved drafts through your connected X account.
+          </p>
+        </div>
+        <button
+          className="h-10 w-fit border border-black bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={status === undefined || isConnecting}
+          onClick={() => void handleConnectX()}
+          type="button"
+        >
+          {isConnecting ? "Connecting..." : "Connect X account"}
+        </button>
+      </div>
+
+      {status === undefined ? (
+        <p className="mt-4 text-sm text-zinc-500">Checking X account...</p>
+      ) : status.connected ? (
+        <div className="mt-4 border border-emerald-200 bg-emerald-50 p-4 text-sm">
+          <p className="font-medium text-emerald-800">Connected</p>
+          <p className="mt-1 text-emerald-950">
+            {status.username ? `@${status.username}` : "Ready to post to X."}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-zinc-600">
+          No X account connected yet.
+        </p>
+      )}
+
+      {error ? (
+        <div className="mt-4 border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+          <p className="font-medium">X connection needs attention.</p>
+          <p className="mt-1">{error}</p>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -423,8 +490,11 @@ function clearInstallationQueryParams() {
   window.history.replaceState(null, "", `${url.pathname}${url.search}`);
 }
 
-function errorMessage(error: unknown) {
+function errorMessage(
+  error: unknown,
+  fallback = "GitHub connection failed. Reinstall the GitHub App and try again.",
+) {
   return error instanceof Error
     ? error.message
-    : "GitHub connection failed. Reinstall the GitHub App and try again.";
+    : fallback;
 }
