@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { rateLimiter } from "./rateLimits";
 import { createXPost } from "./xApi";
 import {
   action,
@@ -121,6 +122,14 @@ export const postDraft = action({
 
     if (postingContext.status === "posted") {
       return { xPostId: postingContext.xPostId };
+    }
+
+    const postingLimit = await rateLimiter.limit(ctx, "postDraftToX", {
+      key: postingContext.userId,
+    });
+
+    if (!postingLimit.ok) {
+      throw new Error("You're posting too quickly. Try again in a few seconds.");
     }
 
     if (postingContext.tokenExpiresAt <= Date.now()) {
