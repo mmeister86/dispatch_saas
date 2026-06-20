@@ -1,10 +1,10 @@
 ---
 id: TASK-41
 title: Polish drafts workspace visual design
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-06-19 13:29'
-updated_date: '2026-06-19 16:17'
+updated_date: '2026-06-20 07:12'
 labels: []
 dependencies: []
 priority: high
@@ -31,3 +31,9 @@ Polished /drafts into a production-style workspace: rounded app shell, dark side
 
 Fixed sidebar clipping after Chrome review by widening the desktop sidebar to a 360-380px minmax track, adding min-width guards, and replacing hard truncation with wrapping commit text. Verified in Chrome on localhost:3000/drafts plus pnpm test, pnpm exec tsc --noEmit, and pnpm lint.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Polished /drafts into a production-style workspace, fixed sidebar clipping, and verified the result in Chrome on localhost:3000/drafts. Tests, typecheck, and lint pass; lint only reports existing generated Convex warnings.
+<!-- SECTION:FINAL_SUMMARY:END -->

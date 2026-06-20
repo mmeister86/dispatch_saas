@@ -1,10 +1,10 @@
 ---
 id: TASK-20.1
 title: 'T-020a: Move drafts into routed workspace'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-06-19 12:50'
-updated_date: '2026-06-19 12:58'
+updated_date: '2026-06-20 07:12'
 labels:
   - phase-2
   - t-020a
@@ -43,3 +43,9 @@ Move the draft-working experience from the compact home inbox into a dedicated /
 <!-- SECTION:NOTES:BEGIN -->
 Implemented the routed /drafts workspace with repository sidebar, canvas editor, Home CTA, and reviewer fixes for unmatched draft repos plus textarea accessibility. Verification passed: pnpm test, pnpm exec tsc --noEmit, pnpm lint (lint has only existing generated Convex warnings).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Moved drafts into /drafts with connected repo sidebar, commit selection, and reusable editor canvas. Preserved variant selection, editing, media upload, posting, cap messaging, notices, and errors. Verified with pnpm test, pnpm exec tsc --noEmit, pnpm lint, code review, and Chrome checks.
+<!-- SECTION:FINAL_SUMMARY:END -->
