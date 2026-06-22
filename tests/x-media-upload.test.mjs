@@ -81,5 +81,5 @@ test("subscriber review screen uploads one optional image with a Convex auth tok
   assert.match(source, /!isUploading/);
   assert.match(source, /type="file"/);
   assert.match(source, /accept="image\/png,image\/jpeg,image\/webp"/);
-  assert.match(source, /Text-only remains ready/);
+  assert.match(source, /Text-only is ready/);
 });
