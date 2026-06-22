@@ -49,7 +49,7 @@ export async function createXPost({
   });
 
   if (!response.ok) {
-    throw new Error(`X post request failed: ${response.status}`);
+    throw new Error(safeXPostErrorMessage(response.status));
   }
 
   const payload = (await response.json()) as CreateXPostResponse;
@@ -91,7 +91,7 @@ export async function uploadTweetImage({
   });
 
   if (!response.ok) {
-    throw new Error(`X media upload failed: ${response.status}`);
+    throw new Error(safeXMediaUploadErrorMessage(response.status));
   }
 
   const payload = (await response.json()) as XMediaUploadResponse;
@@ -106,4 +106,36 @@ export async function uploadTweetImage({
   }
 
   return { mediaId };
+}
+
+function safeXPostErrorMessage(status: number) {
+  switch (status) {
+    case 401:
+    case 403:
+      return "X connection expired. Reconnect X before posting.";
+    case 429:
+      return "X is rate limiting posts right now. Try again in a minute.";
+    default:
+      if (status >= 500) {
+        return "X is temporarily unavailable. Try again in a minute.";
+      }
+
+      return "X post failed. Try again.";
+  }
+}
+
+function safeXMediaUploadErrorMessage(status: number) {
+  switch (status) {
+    case 401:
+    case 403:
+      return "X connection expired. Reconnect X before uploading media.";
+    case 429:
+      return "X is rate limiting media uploads right now. Try again in a minute.";
+    default:
+      if (status >= 500) {
+        return "X is temporarily unavailable. Try again in a minute.";
+      }
+
+      return "X media upload failed. Try again.";
+  }
 }

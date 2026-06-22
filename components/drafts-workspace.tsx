@@ -121,6 +121,8 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
     [repos, unmatchedDraftRepoNames],
   );
   const firstDraftId = drafts?.[0]?._id ?? null;
+  const hasConnectedRepos = (repos ?? []).length > 0;
+  const hasDrafts = (drafts ?? []).length > 0;
 
   useEffect(() => {
     if (selectedDraftId !== null || firstDraftId === null) {
@@ -150,7 +152,9 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
     } catch (err) {
       setErrorByDraftId((current) => ({
         ...current,
-        [draft._id]: errorMessage(err, "Posting failed. Try again."),
+        [draft._id]: userFacingActionError(
+          errorMessage(err, "Posting failed. Try again."),
+        ),
       }));
     } finally {
       setPostingDraftId(null);
@@ -210,7 +214,9 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
     } catch (err) {
       setErrorByDraftId((current) => ({
         ...current,
-        [draft._id]: errorMessage(err, "Image upload failed. Try again."),
+        [draft._id]: userFacingActionError(
+          errorMessage(err, "Image upload failed. Try again."),
+        ),
       }));
     } finally {
       setUploadingDraftId(null);
@@ -267,10 +273,10 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
             <p className="px-6 py-5 text-sm text-white/50">
               Loading repositories...
             </p>
-          ) : repoSections.length === 0 ? (
+          ) : !hasConnectedRepos && !hasDrafts ? (
             <p className="px-6 py-5 text-sm leading-6 text-white/50">
-              No connected repositories or commit drafts yet. Connect a repo
-              from the workspace.
+              Connect a repository first. Open settings to choose the GitHub
+              repo Dispatch should watch.
             </p>
           ) : (
             <div className="grid max-h-[44vh] min-w-0 gap-2 overflow-y-auto px-3 py-4 lg:max-h-[calc(100vh-156px)] lg:px-4">
@@ -288,7 +294,16 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
         </aside>
 
         <section className="flex min-h-[70vh] items-start justify-center overflow-y-auto bg-[#f3efe7] px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
-          {selectedDraft ? (
+          {isLoading ? (
+            <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+              <p className="text-sm font-semibold text-[#2f8a67]">
+                Draft detail
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-normal">
+                Loading draft detail...
+              </h2>
+            </div>
+          ) : selectedDraft ? (
             <DraftEditorCanvas
               cappedMessage={cappedMessage}
               draft={selectedDraft}
@@ -314,22 +329,81 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
               selectedText={selectedTextForDraft(selectedDraft)}
             />
           ) : (
-            <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-              <p className="text-sm font-semibold text-[#2f8a67]">
-                Draft detail
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-normal">
-                Select a commit draft.
-              </h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
-                Choose a commit from the sidebar to review variants, edit the
-                post, attach an image, and publish to X.
-              </p>
-            </div>
+            <DraftsEmptyState
+              hasConnectedRepos={hasConnectedRepos}
+              hasDrafts={hasDrafts}
+            />
           )}
         </section>
       </div>
     </main>
+  );
+}
+
+function DraftsEmptyState({
+  hasConnectedRepos,
+  hasDrafts,
+}: {
+  hasConnectedRepos: boolean;
+  hasDrafts: boolean;
+}) {
+  if (!hasConnectedRepos) {
+    return (
+      <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <p className="text-sm font-semibold text-[#2f8a67]">
+          Draft detail
+        </p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-normal">
+          Connect a repository first.
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+          Dispatch needs one GitHub repo before it can turn commits into X
+          drafts.
+        </p>
+        <Link
+          className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
+          href="/settings"
+        >
+          Open settings
+        </Link>
+      </div>
+    );
+  }
+
+  if (!hasDrafts) {
+    return (
+      <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+        <p className="text-sm font-semibold text-[#2f8a67]">
+          Draft detail
+        </p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-normal">
+          No commit drafts yet.
+        </h2>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+          Push to a connected repository and Dispatch will drop the generated
+          variants here.
+        </p>
+        <Link
+          className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
+          href="/settings"
+        >
+          Open settings
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
+      <p className="text-sm font-semibold text-[#2f8a67]">Draft detail</p>
+      <h2 className="mt-2 text-3xl font-semibold tracking-normal">
+        Select a commit draft.
+      </h2>
+      <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+        Choose a commit from the sidebar to review variants, edit the post,
+        attach an image, and publish to X.
+      </p>
+    </div>
   );
 }
 
@@ -479,6 +553,19 @@ function DraftEditorCanvas({
         </p>
       ) : null}
 
+      {isCapped ? (
+        <div
+          className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+          role="alert"
+        >
+          <p className="font-semibold">Monthly post cap reached.</p>
+          <p className="mt-1">
+            You can keep editing this draft, but posting unlocks when the
+            billing period renews or your plan changes.
+          </p>
+        </div>
+      ) : null}
+
       {draft.variants.length === 0 ? (
         <p className="mt-6 text-sm text-[#7b7166]">Generating variants...</p>
       ) : (
@@ -606,4 +693,27 @@ function formatDate(timestamp: number) {
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function userFacingActionError(message: string) {
+  if (
+    message.includes("Reconnect X before posting") ||
+    message.includes("Connect X before posting") ||
+    message.includes("Connect X before uploading media")
+  ) {
+    return `${message} Open the X account panel from the workspace, reconnect, then try posting again.`;
+  }
+
+  if (
+    message.includes("temporarily unavailable") ||
+    message.includes("rate limiting")
+  ) {
+    if (message.includes("Try again in a minute")) {
+      return `${message} Your draft was not posted.`;
+    }
+
+    return `${message} Try again in a minute; your draft was not posted.`;
+  }
+
+  return message;
 }
