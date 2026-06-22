@@ -5,6 +5,7 @@ import {
   env,
   internalMutation,
   internalQuery,
+  mutation,
   query,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -15,6 +16,7 @@ type ActiveUserAccess = {
   userId: Id<"users">;
   plan: Plan;
   repoLimit: number;
+  githubInstallationId?: string;
 };
 
 type RepositoryOption = {
@@ -49,6 +51,12 @@ type CompleteInstallationResult =
 type ConnectInstalledRepositoryResult = LimitState & {
   kind: "connected";
   repo: ConnectedRepository;
+};
+
+type InstalledRepositoryOptionsResult = LimitState & {
+  kind: "selectionRequired";
+  installationId: string;
+  repositories: RepositoryOption[];
 };
 
 const REPO_LIMITS = {
@@ -86,6 +94,7 @@ export const connectedRepos = query({
     v.object({
       ...limitStateValidator,
       installUrl: v.string(),
+      hasGitHubInstallation: v.boolean(),
       repos: v.array(connectedRepositoryValidator),
     }),
   ),
@@ -100,7 +109,7 @@ export const connectedRepos = query({
       .query("repos")
       .withIndex("by_userId", (q) => q.eq("userId", access.userId))
       .order("desc")
-      .take(access.repoLimit);
+      .take(REPO_LIMITS.better + 1);
 
     return {
       plan: access.plan,
@@ -108,6 +117,9 @@ export const connectedRepos = query({
       repoCount: repos.length,
       canConnectMore: repos.length < access.repoLimit,
       installUrl: env.GITHUB_APP_INSTALL_URL,
+      hasGitHubInstallation:
+        access.githubInstallationId !== undefined ||
+        repos.some((repo) => repo.githubInstallationId.length > 0),
       repos: repos.map(repoToConnectedRepository),
     };
   },
@@ -139,6 +151,11 @@ export const completeInstallation = action({
         "The GitHub App installation does not include any repositories.",
       );
     }
+
+    await ctx.runMutation(internal.github.rememberGitHubInstallation, {
+      userId: access.userId,
+      githubInstallationId: args.installationId,
+    });
 
     if (repositories.length === 1) {
       const repo = repositories[0];
@@ -206,6 +223,10 @@ export const connectInstalledRepository = action({
     const access: ActiveUserAccess =
       await requireSignedInActiveUserAccess(ctx);
     const repositories = await listInstallationRepositories(args.installationId);
+    await ctx.runMutation(internal.github.rememberGitHubInstallation, {
+      userId: access.userId,
+      githubInstallationId: args.installationId,
+    });
     const repo = repositories.find(
       (repository) => repository.githubRepoId === args.githubRepoId,
     );
@@ -246,6 +267,98 @@ export const connectInstalledRepository = action({
       canConnectMore: repoCount < access.repoLimit,
       repo: connectedRepo,
     };
+  },
+});
+
+export const installedRepositoryOptions = action({
+  args: {},
+  returns: v.object({
+    kind: v.literal("selectionRequired"),
+    ...limitStateValidator,
+    installationId: v.string(),
+    repositories: v.array(repositoryOptionValidator),
+  }),
+  handler: async (ctx): Promise<InstalledRepositoryOptionsResult> => {
+    const access: ActiveUserAccess =
+      await requireSignedInActiveUserAccess(ctx);
+    const installationId: string | null = await ctx.runQuery(
+      internal.github.currentGitHubInstallation,
+      {
+        userId: access.userId,
+      },
+    );
+
+    if (installationId === null) {
+      throw new Error(
+        "Install the GitHub App before choosing installed repositories.",
+      );
+    }
+
+    const repositories = await listInstallationRepositories(installationId);
+
+    if (repositories.length === 0) {
+      throw new Error(
+        "The GitHub App installation does not include any repositories.",
+      );
+    }
+
+    const repoCount: number = await ctx.runQuery(
+      internal.github.connectedRepoCount,
+      {
+        userId: access.userId,
+      },
+    );
+
+    return {
+      kind: "selectionRequired",
+      plan: access.plan,
+      repoLimit: access.repoLimit,
+      repoCount,
+      canConnectMore: repoCount < access.repoLimit,
+      installationId,
+      repositories,
+    };
+  },
+});
+
+export const disconnectRepo = mutation({
+  args: {
+    githubRepoId: v.string(),
+  },
+  returns: v.object({
+    disconnected: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      throw new Error("Sign in before disconnecting a GitHub repo.");
+    }
+
+    const access: ActiveUserAccess = await ctx.runQuery(
+      internal.github.requireActiveUserAccess,
+      {
+        clerkTokenIdentifier: identity.tokenIdentifier,
+      },
+    );
+    const repo = await ctx.db
+      .query("repos")
+      .withIndex("by_userId_and_githubRepoId", (q) =>
+        q.eq("userId", access.userId).eq("githubRepoId", args.githubRepoId),
+      )
+      .unique();
+
+    if (repo === null) {
+      return { disconnected: false };
+    }
+
+    await ctx.runMutation(internal.github.rememberGitHubInstallation, {
+      userId: access.userId,
+      githubInstallationId: repo.githubInstallationId,
+    });
+    await ctx.db.delete(repo._id);
+
+    return { disconnected: true };
   },
 });
 
@@ -305,6 +418,43 @@ export const connectedRepoCount = internalQuery({
       .take(REPO_LIMITS.better + 1);
 
     return repos.length;
+  },
+});
+
+export const rememberGitHubInstallation = internalMutation({
+  args: {
+    userId: v.id("users"),
+    githubInstallationId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      githubInstallationId: args.githubInstallationId,
+    });
+
+    return null;
+  },
+});
+
+export const currentGitHubInstallation = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+
+    if (user?.githubInstallationId) {
+      return user.githubInstallationId;
+    }
+
+    const repos = await ctx.db
+      .query("repos")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(1);
+
+    return repos[0]?.githubInstallationId ?? null;
   },
 });
 
@@ -426,6 +576,9 @@ async function getCurrentActiveUserAccess(ctx: QueryCtx) {
     userId: user._id,
     plan: subscription.plan,
     repoLimit: repoLimitForPlan(subscription.plan),
+    ...(user.githubInstallationId
+      ? { githubInstallationId: user.githubInstallationId }
+      : {}),
   };
 }
 

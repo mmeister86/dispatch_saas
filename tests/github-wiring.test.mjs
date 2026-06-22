@@ -167,15 +167,17 @@ test("GitHub push webhooks create exactly one draft from the validated raw JSON 
   assert.ok(schedulerIndex > insertIndex);
 });
 
-test("subscriber workspace exposes the repo connection flow", async () => {
-  const source = await read("app/page.tsx");
+test("settings workspace exposes the repo connection flow", async () => {
+  const source = await read("components/settings-workspace.tsx");
 
   assert.match(source, /api\.github\.connectedRepos/);
   assert.match(source, /api\.github\.completeInstallation/);
   assert.match(source, /api\.github\.connectInstalledRepository/);
+  assert.match(source, /api\.github\.disconnectRepo/);
   assert.match(source, /repoCount/);
   assert.match(source, /repoLimit/);
   assert.match(source, /Install GitHub App/);
+  assert.match(source, /Disconnect/);
   assert.match(source, /href=\{installUrl\}/);
   assert.match(source, /installation_id/);
   assert.match(source, /Upgrade to Better/);

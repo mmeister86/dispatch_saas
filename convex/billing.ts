@@ -129,6 +129,63 @@ export const createCheckout = action({
   },
 });
 
+export const createBillingPortal = action({
+  args: {},
+  returns: v.object({ url: v.string() }),
+  handler: async (ctx): Promise<{ url: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      throw new Error("You must be signed in to manage billing.");
+    }
+
+    const subscription: { lemonSubscriptionId: string } | null =
+      await ctx.runQuery(internal.billing.activeSubscriptionForBillingPortal, {
+        clerkTokenIdentifier: identity.tokenIdentifier,
+      });
+
+    if (subscription === null) {
+      throw new Error("Subscribe before managing billing.");
+    }
+
+    return await createLemonBillingPortal(subscription.lemonSubscriptionId);
+  },
+});
+
+export const activeSubscriptionForBillingPortal = internalQuery({
+  args: {
+    clerkTokenIdentifier: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      lemonSubscriptionId: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkTokenIdentifier", (q) =>
+        q.eq("clerkTokenIdentifier", args.clerkTokenIdentifier),
+      )
+      .unique();
+
+    if (user === null) {
+      return null;
+    }
+
+    const subscription = await getActiveSubscription(ctx, user._id);
+
+    if (subscription === null) {
+      return null;
+    }
+
+    return {
+      lemonSubscriptionId: subscription.lemonSubscriptionId,
+    };
+  },
+});
+
 export const hasActiveSubscriptionForUser = internalQuery({
   args: {
     userId: v.id("users"),
@@ -263,6 +320,44 @@ async function createLemonCheckout({
 
   if (typeof url !== "string" || url.length === 0) {
     throw new Error("Lemon Squeezy did not return a checkout URL.");
+  }
+
+  return { url };
+}
+
+async function createLemonBillingPortal(subscriptionId: string) {
+  const response = await fetch(
+    `https://api.lemonsqueezy.com/v1/subscriptions/${subscriptionId}`,
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.api+json",
+        Authorization: `Bearer ${env.LEMONSQUEEZY_API_KEY}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+
+    throw new Error(
+      `Lemon Squeezy billing portal failed: ${response.status} ${responseBody}`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      attributes?: {
+        urls?: {
+          customer_portal?: unknown;
+        };
+      };
+    };
+  };
+  const url = payload.data?.attributes?.urls?.customer_portal;
+
+  if (typeof url !== "string" || url.length === 0) {
+    throw new Error("Lemon Squeezy did not return a billing portal URL.");
   }
 
   return { url };

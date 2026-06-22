@@ -247,12 +247,20 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
                 Pick a commit, tune the post, ship it.
               </p>
             </div>
-            <Link
-              className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
-              href="/"
-            >
-              Home
-            </Link>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
+                href="/settings"
+              >
+                Settings
+              </Link>
+              <Link
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
+                href="/"
+              >
+                Home
+              </Link>
+            </div>
           </div>
 
           {isLoading ? (

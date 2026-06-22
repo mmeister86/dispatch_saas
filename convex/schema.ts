@@ -6,6 +6,7 @@ export default defineSchema({
     clerkTokenIdentifier: v.string(),
     email: v.string(),
     githubId: v.optional(v.string()),
+    githubInstallationId: v.optional(v.string()),
     xUserId: v.optional(v.string()),
     xAccessToken: v.optional(v.string()),
     xRefreshToken: v.optional(v.string()),
