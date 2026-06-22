@@ -1,11 +1,11 @@
 ---
 id: TASK-21
 title: 'T-021: Draft review screen (variants, edit, optional image upload, post)'
-status: In Progress
+status: Done
 assignee:
   - '@Codex'
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-22 07:36'
+updated_date: '2026-06-22 09:43'
 labels:
   - imported-from-docs
   - phase-2
@@ -27,7 +27,7 @@ Note: lovable moment
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 user sees variants, edits text, optionally attaches an image, posts; Evidence Collector confirms the variants are post-worthy.
+- [x] #1 user sees variants, edits text, optionally attaches an image, posts; Evidence Collector confirms the variants are post-worthy.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -51,3 +51,9 @@ Verification: pnpm test passed 68/68; pnpm exec tsc --noEmit passed; pnpm lint e
 
 Evidence Collector confirmed the review screen can present 2-3 generated variants as the lovable moment and that three existing generation fixtures are post-worthy, distinct, and not changelog-speak. Residual risk: current verification is source-contract and build-level, not authenticated browser/screenshot proof of the live /drafts flow.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shipped the draft review screen polish for TASK-21. The routed /drafts review canvas now makes selected variants visible and accessible, keeps editing and the 280-character publishing gate explicit, preserves text-only posting as the default, shows optional image attachment without exposing raw media IDs, and exposes post/upload/error feedback through live regions. Added a focused source-contract test for the review flow and updated the media upload contract copy. Evidence Collector confirmed the existing generated fixture variants are post-worthy, distinct, and not changelog-speak. Verification: pnpm test 68/68, pnpm exec tsc --noEmit, pnpm lint with only existing generated Convex warnings, and pnpm build outside the sandbox all passed.
+<!-- SECTION:FINAL_SUMMARY:END -->
