@@ -39,29 +39,30 @@ test("shared rate limits use balanced per-user generation and posting buckets", 
   assert.match(source, /period:\s*10_000/);
 });
 
-test("GitHub push draft generation is rate limited per user after duplicate checks", async () => {
+test("GitHub push draft generation is reserved per user after draft insertion", async () => {
   const source = await read("convex/http.ts");
   const createDraftSource = source.slice(
-    source.indexOf("export const createDraftFromGithubPushWebhook"),
+    source.indexOf("export const createDraftsFromGithubPushWebhook"),
     source.indexOf("async function isValidSignature"),
   );
 
   assert.match(source, /import \{ rateLimiter \} from "\.\/rateLimits"/);
   assert.ok(
     createDraftSource.indexOf("existingDraft.length > 0") <
-      createDraftSource.indexOf('rateLimiter.limit(ctx, "generateDraftVariants"'),
+      createDraftSource.indexOf('ctx.db.insert("drafts"'),
   );
   assert.match(
     createDraftSource,
-    /rateLimiter\.limit\(ctx,\s*"generateDraftVariants",\s*\{\s*key:\s*repo\.userId,\s*\}\)/s,
+    /rateLimiter\.limit\(\s*ctx,\s*"generateDraftVariants",\s*\{\s*key:\s*repo\.userId,\s*reserve:\s*true,\s*\},\s*\)/s,
   );
   assert.ok(
-    createDraftSource.indexOf('rateLimiter.limit(ctx, "generateDraftVariants"') <
-      createDraftSource.indexOf('ctx.db.insert("drafts"'),
+    createDraftSource.indexOf('ctx.db.insert("drafts"') <
+      createDraftSource.indexOf("rateLimiter.limit("),
   );
-  assert.match(createDraftSource, /if \(!generationLimit\.ok\) \{\s*continue;\s*\}/s);
+  assert.doesNotMatch(createDraftSource, /if \(!generationLimit\.ok\) \{\s*continue;\s*\}/s);
+  assert.match(createDraftSource, /generationLimit\.retryAfter \?\? 0/);
   assert.ok(
-    createDraftSource.indexOf("!generationLimit.ok") <
+    createDraftSource.indexOf("generationLimit.ok") <
       createDraftSource.indexOf("internal.generation.populateDraftVariants"),
   );
 });

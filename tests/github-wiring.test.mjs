@@ -116,14 +116,18 @@ test("Convex HTTP exposes a signed GitHub webhook endpoint for ping only", async
   assert.match(source, /X-GitHub-Event/);
   assert.match(source, /eventName === "ping"/);
   assert.match(source, /eventName !== "push"/);
-  assert.match(source, /ctx\.runMutation\(internal\.http\.createDraftFromGithubPushWebhook/);
+  assert.match(source, /ctx\.runMutation\(internal\.http\.createDraftsFromGithubPushWebhook/);
 });
 
-test("GitHub push webhooks create exactly one draft from the validated raw JSON body and schedule variant generation", async () => {
+test("GitHub push webhooks create drafts for every valid commit from the validated raw JSON body and schedule variant generation", async () => {
   const source = await read("convex/http.ts");
   const draftMutationSource = source.slice(
-    source.indexOf("export const createDraftFromGithubPushWebhook"),
+    source.indexOf("export const createDraftsFromGithubPushWebhook"),
     source.indexOf("async function isValidSignature"),
+  );
+  const payloadValidatorSource = source.slice(
+    source.indexOf("function isGitHubPushWebhookPayload"),
+    source.indexOf("type GitHubPushDraftCommit"),
   );
 
   assert.match(source, /if \(eventName !== "push"\)/);
@@ -134,21 +138,40 @@ test("GitHub push webhooks create exactly one draft from the validated raw JSON 
   assert.match(source, /return new Response\("Invalid JSON", \{ status: 400 \}\)/);
   assert.match(source, /function isGitHubRepository\(/);
   assert.match(source, /typeof value\.id === "string" \|\| typeof value\.id === "number"/);
+  assert.match(payloadValidatorSource, /Array\.isArray\(value\.commits\)/);
+  assert.doesNotMatch(payloadValidatorSource, /for \(const commit of value\.commits\)/);
+  assert.doesNotMatch(payloadValidatorSource, /!isGitHubPushCommit\(value\.head_commit\)/);
+  assert.match(source, /const draftCommits = selectDraftCommits\(payload\)/);
+  assert.doesNotMatch(source, /const draftCommit = selectDraftCommit\(payload\)/);
+  assert.match(source, /draftCommits\.length === 0/);
+  assert.match(source, /ctx\.runMutation\(internal\.http\.createDraftsFromGithubPushWebhook/);
+  assert.match(source, /commits:\s*draftCommits\.map\(\(commit\) => \(\{\s*commitSha:\s*commit\.id,\s*commitMessage:\s*commit\.message,\s*\}\)\)/s);
+  assert.match(source, /function selectDraftCommits\(/);
+  assert.match(source, /const seenCommitShas = new Set<string>\(\)/);
+  assert.match(source, /for \(const commit of payload\.commits\)/);
+  assert.match(source, /seenCommitShas\.has\(commit\.id\)/);
+  assert.match(source, /seenCommitShas\.add\(commit\.id\)/);
+  assert.match(source, /draftCommits\.push\(commit\)/);
+  assert.match(source, /function selectFallbackDraftCommit\(/);
+  assert.match(source, /isValidPushCommit\(payload\.head_commit\)/);
+  assert.match(source, /payload\.commits\.find\(\s*\(commit\) => isValidPushCommit\(commit\) && commit\.id === after,\s*\)/s);
   assert.match(draftMutationSource, /repos"\)\n\s+\.withIndex\("by_githubRepoId"/);
   assert.match(draftMutationSource, /\.take\(MAX_CONNECTED_REPOS_PER_PUSH\)/);
   assert.doesNotMatch(draftMutationSource, /by_githubRepoId"[\s\S]*?\.unique\(\)/);
   assert.match(draftMutationSource, /for \(const repo of repos\)/);
+  assert.match(draftMutationSource, /commits:\s*v\.array\(\s*v\.object\(\{\s*commitSha:\s*v\.string\(\),\s*commitMessage:\s*v\.string\(\),\s*\}\),\s*\)/s);
+  assert.match(draftMutationSource, /for \(const commit of args\.commits\)/);
   assert.match(draftMutationSource, /drafts"\)\n\s+\.withIndex\("by_repoId_and_commitSha"/);
+  assert.match(draftMutationSource, /q\.eq\("repoId", repo\._id\)\.eq\("commitSha", commit\.commitSha\)/);
   assert.match(draftMutationSource, /\.take\(1\)/);
-  assert.match(source, /isValidPushCommit\(payload\.head_commit\)/);
-  assert.match(source, /typeof commit\.id === "string"/);
-  assert.match(source, /typeof commit\.message === "string"/);
-  assert.match(source, /payload\.commits\.find\(\(commit\) => commit\.id === after\)/);
+  assert.match(source, /typeof value\.id === "string"/);
+  assert.match(source, /typeof value\.message === "string"/);
   assert.match(source, /status:\s*"draft"/);
   assert.match(source, /variants:\s*\[\]/);
-  assert.match(source, /ctx\.scheduler\.runAfter\(0,\s*internal\.generation\.populateDraftVariants/);
+  assert.match(source, /ctx\.scheduler\.runAfter\(\s*generationLimit\.retryAfter \?\? 0,\s*internal\.generation\.populateDraftVariants/s);
   assert.match(source, /draftId:\s*draftId/);
-  assert.match(source, /commitMessage:\s*args\.commitMessage/);
+  assert.match(source, /commitSha:\s*commit\.commitSha/);
+  assert.match(source, /commitMessage:\s*commit\.commitMessage/);
   assert.match(source, /return new Response\("OK", \{ status: 200 \}\)/);
   assert.match(source, /isDeleteOrEmptyPush\(payload\)/);
 
@@ -159,7 +182,7 @@ test("GitHub push webhooks create exactly one draft from the validated raw JSON 
     'const draftId = await ctx.db.insert("drafts"',
   );
   const schedulerIndex = draftMutationSource.indexOf(
-    "ctx.scheduler.runAfter(0, internal.generation.populateDraftVariants",
+    "ctx.scheduler.runAfter(",
   );
 
   assert.ok(existingDraftCheckIndex > -1);

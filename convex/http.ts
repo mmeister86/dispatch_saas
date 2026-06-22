@@ -54,16 +54,18 @@ http.route({
     }
 
     const repoId = payload.repository.id;
-    const draftCommit = selectDraftCommit(payload);
+    const draftCommits = selectDraftCommits(payload);
 
-    if (draftCommit == null) {
+    if (draftCommits.length === 0) {
       return new Response("Invalid push payload", { status: 400 });
     }
 
-    await ctx.runMutation(internal.http.createDraftFromGithubPushWebhook, {
+    await ctx.runMutation(internal.http.createDraftsFromGithubPushWebhook, {
       githubRepoId: String(repoId),
-      commitSha: draftCommit.id,
-      commitMessage: draftCommit.message,
+      commits: draftCommits.map((commit) => ({
+        commitSha: commit.id,
+        commitMessage: commit.message,
+      })),
     });
 
     return new Response("OK", { status: 200 });
@@ -431,11 +433,15 @@ export const upsertSubscriptionFromWebhook = internalMutation({
   },
 });
 
-export const createDraftFromGithubPushWebhook = internalMutation({
+export const createDraftsFromGithubPushWebhook = internalMutation({
   args: {
     githubRepoId: v.string(),
-    commitSha: v.string(),
-    commitMessage: v.string(),
+    commits: v.array(
+      v.object({
+        commitSha: v.string(),
+        commitMessage: v.string(),
+      }),
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -447,38 +453,47 @@ export const createDraftFromGithubPushWebhook = internalMutation({
       .take(MAX_CONNECTED_REPOS_PER_PUSH);
 
     for (const repo of repos) {
-      const existingDraft = await ctx.db
-        .query("drafts")
-        .withIndex("by_repoId_and_commitSha", (q) =>
-          q.eq("repoId", repo._id).eq("commitSha", args.commitSha),
-        )
-        .take(1);
+      for (const commit of args.commits) {
+        const existingDraft = await ctx.db
+          .query("drafts")
+          .withIndex("by_repoId_and_commitSha", (q) =>
+            q.eq("repoId", repo._id).eq("commitSha", commit.commitSha),
+          )
+          .take(1);
 
-      if (existingDraft.length > 0) {
-        continue;
+        if (existingDraft.length > 0) {
+          continue;
+        }
+
+        const draftId = await ctx.db.insert("drafts", {
+          userId: repo.userId,
+          repoId: repo._id,
+          commitSha: commit.commitSha,
+          commitMessage: commit.commitMessage,
+          variants: [],
+          status: "draft",
+        });
+
+        const generationLimit = await rateLimiter.limit(
+          ctx,
+          "generateDraftVariants",
+          {
+            key: repo.userId,
+            reserve: true,
+          },
+        );
+
+        if (generationLimit.ok) {
+          await ctx.scheduler.runAfter(
+            generationLimit.retryAfter ?? 0,
+            internal.generation.populateDraftVariants,
+            {
+              draftId: draftId,
+              commitMessage: commit.commitMessage,
+            },
+          );
+        }
       }
-
-      const generationLimit = await rateLimiter.limit(ctx, "generateDraftVariants", {
-        key: repo.userId,
-      });
-
-      if (!generationLimit.ok) {
-        continue;
-      }
-
-      const draftId = await ctx.db.insert("drafts", {
-        userId: repo.userId,
-        repoId: repo._id,
-        commitSha: args.commitSha,
-        commitMessage: args.commitMessage,
-        variants: [],
-        status: "draft",
-      });
-
-      await ctx.scheduler.runAfter(0, internal.generation.populateDraftVariants, {
-        draftId: draftId,
-        commitMessage: args.commitMessage,
-      });
     }
 
     return null;
@@ -621,13 +636,8 @@ type GitHubPushWebhookPayload = {
   after?: string;
   deleted?: boolean;
   size?: number;
-  commits?: GitHubPushCommit[];
-  head_commit?: GitHubPushCommit | null;
-};
-
-type GitHubPushCommit = {
-  id?: string;
-  message?: string;
+  commits?: unknown[];
+  head_commit?: unknown;
 };
 
 function isDeleteOrEmptyPush(payload: GitHubPushWebhookPayload) {
@@ -661,20 +671,8 @@ function isGitHubPushWebhookPayload(
     return false;
   }
 
-  if (value.head_commit != null && !isGitHubPushCommit(value.head_commit)) {
-    return false;
-  }
-
   if (value.commits != null) {
-    if (!Array.isArray(value.commits)) {
-      return false;
-    }
-
-    for (const commit of value.commits) {
-      if (!isGitHubPushCommit(commit)) {
-        return false;
-      }
-    }
+    return Array.isArray(value.commits);
   }
 
   return true;
@@ -685,7 +683,32 @@ type GitHubPushDraftCommit = {
   message: string;
 };
 
-function selectDraftCommit(
+function selectDraftCommits(
+  payload: GitHubPushWebhookPayload,
+): GitHubPushDraftCommit[] {
+  const draftCommits: GitHubPushDraftCommit[] = [];
+  const seenCommitShas = new Set<string>();
+
+  if (Array.isArray(payload.commits)) {
+    for (const commit of payload.commits) {
+      if (!isValidPushCommit(commit) || seenCommitShas.has(commit.id)) {
+        continue;
+      }
+
+      seenCommitShas.add(commit.id);
+      draftCommits.push(commit);
+    }
+  }
+
+  if (draftCommits.length > 0) {
+    return draftCommits;
+  }
+
+  const fallbackCommit = selectFallbackDraftCommit(payload);
+  return fallbackCommit ? [fallbackCommit] : [];
+}
+
+function selectFallbackDraftCommit(
   payload: GitHubPushWebhookPayload,
 ): GitHubPushDraftCommit | null {
   if (isValidPushCommit(payload.head_commit)) {
@@ -697,7 +720,10 @@ function selectDraftCommit(
     return null;
   }
 
-  const commit = payload.commits.find((commit) => commit.id === after) ?? null;
+  const commit =
+    payload.commits.find(
+      (commit) => isValidPushCommit(commit) && commit.id === after,
+    ) ?? null;
   if (!isValidPushCommit(commit)) {
     return null;
   }
@@ -706,16 +732,12 @@ function selectDraftCommit(
 }
 
 function isValidPushCommit(
-  commit: GitHubPushCommit | null | undefined,
+  commit: unknown,
 ): commit is GitHubPushDraftCommit {
-  return (
-    !!commit &&
-    typeof commit.id === "string" &&
-    typeof commit.message === "string"
-  );
+  return isGitHubPushCommit(commit);
 }
 
-function isGitHubPushCommit(value: unknown): value is GitHubPushCommit {
+function isGitHubPushCommit(value: unknown): value is GitHubPushDraftCommit {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
