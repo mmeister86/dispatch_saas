@@ -96,8 +96,34 @@ test("settings can reload installed GitHub repositories after the initial callba
   assert.match(githubSource, /export const currentGitHubInstallation = internalQuery\(\{/);
   assert.match(githubSource, /internal\.github\.rememberGitHubInstallation/);
   assert.match(settingsSource, /api\.github\.installedRepositoryOptions/);
-  assert.match(settingsSource, /Choose installed repo/);
+  assert.match(settingsSource, /Load GitHub repositories/);
+  assert.match(settingsSource, /Manage GitHub App access/);
   assert.match(settingsSource, /installationId:\s*result\.installationId/);
+});
+
+test("settings marks installed repositories that are already connected", async () => {
+  const settingsSource = await read("components/settings-workspace.tsx");
+
+  assert.match(settingsSource, /connectedRepoIds/);
+  assert.match(settingsSource, /new Set\(repos\.map\(\(repo\) => repo\.githubRepoId\)\)/);
+  assert.match(settingsSource, /isConnected=\{connectedRepoIds\.has\(repo\.githubRepoId\)\}/);
+  assert.match(settingsSource, /Connected/);
+  assert.match(settingsSource, /already connected/i);
+});
+
+test("settings exposes local-only recovery for an already-installed GitHub App", async () => {
+  const settingsSource = await read("components/settings-workspace.tsx");
+
+  assert.match(settingsSource, /canUseLocalInstallationRecovery/);
+  assert.match(settingsSource, /window\.location\.hostname === "localhost"/);
+  assert.match(settingsSource, /window\.location\.hostname === "127\.0\.0\.1"/);
+  assert.match(settingsSource, /GitHub installation URL/);
+  assert.match(settingsSource, /https:\/\/github\.com\/settings\/installations\/141137818/);
+  assert.match(settingsSource, /handleLoadExistingInstallation/);
+  assert.match(settingsSource, /extractGitHubInstallationUrlId/);
+  assert.match(settingsSource, /url\.hostname !== "github\.com"/);
+  assert.match(settingsSource, /completeInstallation\(\{\s*installationId/s);
+  assert.doesNotMatch(settingsSource, /GitHub installation URL or ID/);
 });
 
 test("disconnect preserves a legacy repo installation id before deleting the row", async () => {

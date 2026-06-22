@@ -230,6 +230,11 @@ function GitHubRepoPanel() {
   const [connectingRepoId, setConnectingRepoId] = useState<string | null>(null);
   const [isChoosingInstalledRepos, setIsChoosingInstalledRepos] =
     useState(false);
+  const [canUseLocalInstallationRecovery, setCanUseLocalInstallationRecovery] =
+    useState(false);
+  const [installationUrlInput, setInstallationUrlInput] = useState("");
+  const [isLoadingExistingInstallation, setIsLoadingExistingInstallation] =
+    useState(false);
   const [disconnectingRepoId, setDisconnectingRepoId] = useState<string | null>(
     null,
   );
@@ -271,6 +276,17 @@ function GitHubRepoPanel() {
       });
   }, [completeInstallation]);
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setCanUseLocalInstallationRecovery(
+        window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1",
+      );
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   async function handleConnectInstalledRepository(githubRepoId: string) {
     if (pendingSelection === null) {
       return;
@@ -292,6 +308,41 @@ function GitHubRepoPanel() {
       setError(errorMessage(err));
     } finally {
       setConnectingRepoId(null);
+    }
+  }
+
+  async function handleLoadExistingInstallation() {
+    const installationId = extractGitHubInstallationUrlId(installationUrlInput);
+
+    if (installationId === null) {
+      setError("Enter the GitHub installation URL.");
+      return;
+    }
+
+    processedInstallationId.current = installationId;
+    setIsLoadingExistingInstallation(true);
+    setNotice(null);
+    setError(null);
+
+    try {
+      const result = await completeInstallation({ installationId });
+
+      if (result.kind === "selectionRequired") {
+        setPendingSelection({
+          installationId,
+          repositories: result.repositories,
+        });
+        setInstallationUrlInput("");
+        return;
+      }
+
+      setPendingSelection(null);
+      setInstallationUrlInput("");
+      setNotice(`${result.repo.fullName} is connected.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setIsLoadingExistingInstallation(false);
     }
   }
 
@@ -338,10 +389,12 @@ function GitHubRepoPanel() {
   const canConnectMore = connection?.canConnectMore ?? false;
   const installUrl = connection?.installUrl ?? "";
   const repos = connection?.repos ?? [];
+  const connectedRepoIds = new Set(repos.map((repo) => repo.githubRepoId));
   const isOverRepoLimit = repoCount > repoLimit;
   const canOpenInstallUrl =
     connection !== undefined &&
     connection !== null &&
+    !connection.hasGitHubInstallation &&
     canConnectMore &&
     !isCompletingInstallation &&
     installUrl.length > 0;
@@ -364,6 +417,10 @@ function GitHubRepoPanel() {
             Dispatch watches selected repositories through the GitHub App push
             webhook. Disconnecting only removes the Dispatch connection.
           </p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-700">
+            Use GitHub to grant app access, then load the repositories here to
+            choose which ones Dispatch should watch.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {canChooseInstalledRepo ? (
@@ -375,7 +432,7 @@ function GitHubRepoPanel() {
             >
               {isChoosingInstalledRepos
                 ? "Loading..."
-                : "Choose installed repo"}
+                : "Load GitHub repositories"}
             </button>
           ) : null}
           {canOpenInstallUrl ? (
@@ -396,6 +453,17 @@ function GitHubRepoPanel() {
                 : "Install GitHub App"}
             </button>
           )}
+          {connection !== undefined &&
+          connection !== null &&
+          connection.hasGitHubInstallation &&
+          installUrl.length > 0 ? (
+            <a
+              className="flex h-10 w-fit items-center border border-black/20 bg-white px-4 text-sm font-medium text-black transition-colors hover:bg-zinc-100"
+              href={installUrl}
+            >
+              Manage GitHub App access
+            </a>
+          ) : null}
         </div>
       </div>
 
@@ -405,6 +473,49 @@ function GitHubRepoPanel() {
         </p>
       ) : connection ? (
         <div className="mt-4 grid gap-3">
+          {!connection.hasGitHubInstallation &&
+          canUseLocalInstallationRecovery ? (
+            <form
+              className="grid gap-2 border border-black/10 p-4 text-sm"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleLoadExistingInstallation();
+              }}
+            >
+              <label
+                className="font-medium text-zinc-900"
+                htmlFor="github-installation-url"
+              >
+                GitHub installation URL
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  className="h-10 min-w-0 flex-1 border border-black/20 px-3 text-sm"
+                  id="github-installation-url"
+                  onChange={(event) =>
+                    setInstallationUrlInput(event.target.value)
+                  }
+                  placeholder="https://github.com/settings/installations/141137818"
+                  type="url"
+                  value={installationUrlInput}
+                />
+                <button
+                  className="h-10 w-fit border border-black px-4 text-sm font-medium transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isLoadingExistingInstallation}
+                  type="submit"
+                >
+                  {isLoadingExistingInstallation
+                    ? "Loading..."
+                    : "Load installed app"}
+                </button>
+              </div>
+              <p className="text-xs leading-5 text-zinc-500">
+                Local development only. Use this when GitHub opens the installed
+                app page instead of redirecting back to localhost.
+              </p>
+            </form>
+          ) : null}
+
           <div className="flex flex-col gap-2 border border-black/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium text-zinc-900">
@@ -443,7 +554,8 @@ function GitHubRepoPanel() {
             </div>
           ) : (
             <p className="text-sm text-zinc-600">
-              No repositories connected yet.
+              No repositories connected yet. Install the GitHub App, then load
+              the repositories GitHub allowed for Dispatch.
             </p>
           )}
         </div>
@@ -469,43 +581,70 @@ function GitHubRepoPanel() {
       {pendingSelection !== null ? (
         <div className="mt-4 grid gap-2">
           <p className="text-sm font-medium text-zinc-900">
-            Choose one installed repository
+            Available GitHub repositories
           </p>
           {pendingSelection.repositories.map((repo: RepositoryOption) => (
-            <div
-              className="flex flex-col gap-3 border border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+            <RepositoryOptionRow
+              isConnected={connectedRepoIds.has(repo.githubRepoId)}
+              isConnecting={connectingRepoId === repo.githubRepoId}
+              isDisabled={connectingRepoId !== null || !canConnectMore}
               key={repo.githubRepoId}
-            >
-              <div className="min-w-0">
-                <p className="break-words text-sm font-medium">
-                  {repo.fullName}
-                </p>
-                <a
-                  className="mt-1 block break-words text-xs text-zinc-500 underline"
-                  href={repo.htmlUrl}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {repo.private ? "Private" : "Public"} repository
-                </a>
-              </div>
-              <button
-                className="h-10 w-fit border border-black px-4 text-sm font-medium transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={connectingRepoId !== null || !canConnectMore}
-                onClick={() =>
-                  void handleConnectInstalledRepository(repo.githubRepoId)
-                }
-                type="button"
-              >
-                {connectingRepoId === repo.githubRepoId
-                  ? "Connecting..."
-                  : "Connect"}
-              </button>
-            </div>
+              onConnect={() =>
+                void handleConnectInstalledRepository(repo.githubRepoId)
+              }
+              repo={repo}
+            />
           ))}
         </div>
       ) : null}
     </section>
+  );
+}
+
+function RepositoryOptionRow({
+  isConnected,
+  isConnecting,
+  isDisabled,
+  onConnect,
+  repo,
+}: {
+  isConnected: boolean;
+  isConnecting: boolean;
+  isDisabled: boolean;
+  onConnect: () => void;
+  repo: RepositoryOption;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border border-black/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="break-words text-sm font-medium">{repo.fullName}</p>
+        <a
+          className="mt-1 block break-words text-xs text-zinc-500 underline"
+          href={repo.htmlUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {repo.private ? "Private" : "Public"} repository
+        </a>
+      </div>
+      {isConnected ? (
+        <p className="h-10 w-fit border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
+          Connected
+        </p>
+      ) : (
+        <button
+          className="h-10 w-fit border border-black px-4 text-sm font-medium transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={isDisabled}
+          onClick={onConnect}
+          type="button"
+        >
+          {isConnecting ? "Connecting..." : "Connect"}
+        </button>
+      )}
+      {isConnected ? (
+        <p className="text-xs text-zinc-500">Already connected to Dispatch.</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -548,6 +687,22 @@ function clearInstallationQueryParams() {
   url.searchParams.delete("installation_id");
   url.searchParams.delete("setup_action");
   window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
+function extractGitHubInstallationUrlId(value: string) {
+  try {
+    const url = new URL(value.trim());
+
+    if (url.hostname !== "github.com") {
+      return null;
+    }
+
+    const match = url.pathname.match(/^\/settings\/installations\/(\d+)$/);
+
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function formatDate(timestamp: number) {

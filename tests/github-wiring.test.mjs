@@ -181,6 +181,11 @@ test("settings workspace exposes the repo connection flow", async () => {
   assert.match(source, /href=\{installUrl\}/);
   assert.match(source, /installation_id/);
   assert.match(source, /Upgrade to Better/);
+  assert.match(source, /Load GitHub repositories/);
+  assert.match(source, /Manage GitHub App access/);
+  assert.match(source, /canUseLocalInstallationRecovery/);
+  assert.match(source, /extractGitHubInstallationUrlId/);
   assert.doesNotMatch(source, /window\.location\.assign\(installUrl\)/);
-  assert.doesNotMatch(source, /Load repositories/);
+  assert.doesNotMatch(source, /GitHub installation URL or ID/);
+  assert.doesNotMatch(source, /extractInstallationId/);
 });
