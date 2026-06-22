@@ -133,9 +133,13 @@ export const postDraft = action({
     }
 
     if (postingContext.tokenExpiresAt <= Date.now()) {
-      await ctx.runAction(internal.x.refreshUserToken, {
-        userId: postingContext.userId,
-      });
+      try {
+        await ctx.runAction(internal.x.refreshUserToken, {
+          userId: postingContext.userId,
+        });
+      } catch {
+        throw new Error("X connection expired. Reconnect X before posting.");
+      }
     }
 
     const refreshedContext: DraftPostingContext = await ctx.runQuery(
