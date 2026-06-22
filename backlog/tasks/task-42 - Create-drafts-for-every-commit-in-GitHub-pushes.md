@@ -1,11 +1,11 @@
 ---
 id: TASK-42
 title: Create drafts for every commit in GitHub pushes
-status: In Progress
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-22 19:50'
-updated_date: '2026-06-22 19:58'
+updated_date: '2026-06-22 20:00'
 labels:
   - github
   - drafts
@@ -66,3 +66,26 @@ Review:
 - Initial review found the payload validator rejected mixed valid/invalid commits before filtering; fixed by widening commit payload validation and filtering in `selectDraftCommits`.
 - Re-review noted `commits: []` still bypasses fallback; kept intentionally because empty pushes should not create drafts per TASK-42 AC #5.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented multi-commit GitHub push draft creation.
+
+Summary:
+- GitHub push webhooks now collect all valid commits from `payload.commits[]`, dedupe duplicate SHAs, and create one draft per valid commit instead of only the head commit.
+- Draft creation remains idempotent per repo + commit SHA and no longer gets blocked by generation rate limiting.
+- Variant generation is still rate limited per user and scheduled with `generationLimit.retryAfter ?? 0`.
+- Payload validation now allows mixed valid/invalid commit arrays so valid commits can still produce drafts; explicit delete/empty pushes remain ignored.
+
+Verification:
+- `pnpm exec node --test tests/github-wiring.test.mjs tests/rate-limiter-wiring.test.mjs` passed: 12/12.
+- `pnpm test` passed: 84/84.
+- `pnpm exec tsc --noEmit` passed.
+- `pnpm lint` passed with 0 errors and 4 existing warnings in generated Convex files.
+- `git diff --check` passed.
+
+Review:
+- Code review blocker around eager commit validation was fixed before finalization.
+- Re-review noted the explicit empty-push fallback edge; this stays intentional because empty pushes should not create drafts.
+<!-- SECTION:FINAL_SUMMARY:END -->
