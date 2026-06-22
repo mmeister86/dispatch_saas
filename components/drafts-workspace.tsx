@@ -205,9 +205,7 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
 
       setNoticeByDraftId((current) => ({
         ...current,
-        [draft._id]: payload.mediaId
-          ? `Image attached as ${payload.mediaId}.`
-          : "Image attached.",
+        [draft._id]: "Image attached.",
       }));
     } catch (err) {
       setErrorByDraftId((current) => ({
@@ -418,13 +416,31 @@ function DraftEditorCanvas({
   onUpload: (file: File | null) => void;
   selectedText: string;
 }) {
+  const trimmedText = selectedText.trim();
   const canPost =
     draft.status === "draft" &&
-    selectedText.trim().length > 0 &&
-    selectedText.trim().length <= 280 &&
+    trimmedText.length > 0 &&
+    trimmedText.length <= 280 &&
     !isCapped &&
     !isPosting &&
     !isUploading;
+  const postReadinessId = `post-readiness-${draft._id}`;
+  let postReadinessMessage = "Ready to publish to X.";
+
+  if (draft.status !== "draft") {
+    postReadinessMessage = "This draft is no longer editable.";
+  } else if (trimmedText.length === 0) {
+    postReadinessMessage = "Pick or write a post before publishing.";
+  } else if (trimmedText.length > 280) {
+    postReadinessMessage =
+      "Shorten the post to 280 characters before publishing.";
+  } else if (isCapped) {
+    postReadinessMessage = cappedMessage;
+  } else if (isUploading) {
+    postReadinessMessage = "Image upload needs to finish before posting.";
+  } else if (isPosting) {
+    postReadinessMessage = "Publishing to X...";
+  }
 
   return (
     <article className="w-full max-w-4xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
@@ -446,8 +462,12 @@ function DraftEditorCanvas({
       </div>
 
       {draft.status === "posted" && draft.xPostId ? (
-        <p className="mt-5 rounded-2xl border border-[#bfe5d1] bg-[#ebf8ef] px-4 py-3 text-sm font-semibold text-[#1c7d53]">
-          Posted: {draft.xPostId}
+        <p
+          aria-live="polite"
+          className="mt-5 rounded-2xl border border-[#bfe5d1] bg-[#ebf8ef] px-4 py-3 text-sm font-semibold text-[#1c7d53]"
+          role="status"
+        >
+          Posted to X: {draft.xPostId}
         </p>
       ) : null}
 
@@ -458,17 +478,31 @@ function DraftEditorCanvas({
           <p className="text-sm font-semibold text-[#181411]">
             Choose a variant
           </p>
-          {draft.variants.map((variant) => (
-            <button
-              className="rounded-2xl border border-[#e5dbcb] bg-[#fffaf2] p-4 text-left text-sm leading-6 text-[#625a51] transition-all hover:-translate-y-0.5 hover:border-[#d4c6b3] hover:bg-white hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={draft.status !== "draft"}
-              key={variant}
-              onClick={() => onSelectVariant(variant)}
-              type="button"
-            >
-              {variant}
-            </button>
-          ))}
+          {draft.variants.map((variant) => {
+            const isSelectedVariant = variant === selectedText;
+
+            return (
+              <button
+                aria-pressed={isSelectedVariant}
+                className={`rounded-2xl border p-4 text-left text-sm leading-6 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isSelectedVariant
+                    ? "border-[#181411] bg-white text-[#181411] shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+                    : "border-[#e5dbcb] bg-[#fffaf2] text-[#625a51] hover:border-[#d4c6b3]"
+                }`}
+                disabled={draft.status !== "draft"}
+                key={variant}
+                onClick={() => onSelectVariant(variant)}
+                type="button"
+              >
+                <span>{variant}</span>
+                {isSelectedVariant ? (
+                  <span className="mt-3 block w-fit rounded-full bg-[#181411] px-2.5 py-1 text-xs font-semibold text-white">
+                    Selected variant
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -496,14 +530,13 @@ function DraftEditorCanvas({
           />
         </label>
         <p className="text-xs text-[#7b7166]">
-          {draft.mediaId
-            ? `Attached media ${draft.mediaId}.`
-            : "Text-only remains ready."}
+          {draft.mediaId ? "Image attached." : "Text-only is ready."}
         </p>
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
+          aria-describedby={postReadinessId}
           className="h-11 rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!canPost}
           onClick={onPost}
@@ -511,23 +544,33 @@ function DraftEditorCanvas({
         >
           {isPosting ? "Posting..." : "Post to X"}
         </button>
-        {isUploading ? (
-          <p className="text-sm text-[#7b7166]">Uploading image...</p>
-        ) : null}
-        {isCapped ? (
-          <p className="rounded-full bg-[#fff1d4] px-3 py-1.5 text-sm font-semibold text-[#8a5515]">
-            {cappedMessage}
+        <div
+          aria-live="polite"
+          className="flex flex-wrap items-center gap-3"
+          role="status"
+        >
+          <p
+            className="rounded-full bg-[#f8f2e9] px-3 py-1.5 text-sm font-semibold text-[#625a51]"
+            id={postReadinessId}
+          >
+            {postReadinessMessage}
           </p>
-        ) : null}
-        {notice ? (
-          <p className="rounded-full bg-[#ebf8ef] px-3 py-1.5 text-sm font-semibold text-[#1c7d53]">
-            {notice}
-          </p>
-        ) : null}
+          {isUploading ? (
+            <p className="text-sm text-[#7b7166]">Uploading image...</p>
+          ) : null}
+          {notice ? (
+            <p className="rounded-full bg-[#ebf8ef] px-3 py-1.5 text-sm font-semibold text-[#1c7d53]">
+              {notice}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {error ? (
-        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
+        <div
+          className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800"
+          role="alert"
+        >
           {error}
         </div>
       ) : null}
