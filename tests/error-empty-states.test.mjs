@@ -17,7 +17,7 @@ test("drafts workspace gives a direct repo connection empty state", async () => 
   assert.match(source, /const hasDrafts = \(drafts \?\? \[\]\)\.length > 0/);
   assert.match(emptyStateSource, /Connect a repository first\./);
   assert.match(emptyStateSource, /Dispatch needs one GitHub repo before it can turn commits into X\s+drafts\./);
-  assert.match(emptyStateSource, /href="\/settings"/);
+  assert.match(emptyStateSource, /href="\/dashboard\/settings"/);
   assert.match(emptyStateSource, /Open settings/);
 });
 
@@ -37,7 +37,7 @@ test("drafts workspace explains the connected-repo no-commits state", async () =
 test("drafts workspace does not show empty-state guidance while data loads", async () => {
   const source = await read("components/drafts-workspace.tsx");
   const detailSource = source.slice(
-    source.indexOf('<section className="flex min-h-[70vh]'),
+    source.indexOf('<section className="min-w-0">'),
     source.indexOf("function DraftsEmptyState"),
   );
 

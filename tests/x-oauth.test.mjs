@@ -100,6 +100,9 @@ test("X OAuth callback is handled by Convex HTTP and stores tokens through inter
   assert.match(httpSource, /method:\s*"GET"/);
   assert.match(httpSource, /ctx\.runAction\(internal\.x\.completeOAuthCallback/);
   assert.match(httpSource, /env\.APP_URL/);
+  assert.match(httpSource, /\/dashboard\/settings/);
+  assert.match(httpSource, /x=connected/);
+  assert.match(httpSource, /x=error/);
   assert.match(httpSource, /"Cache-Control":\s*"no-store"/);
   assert.match(httpSource, /"Referrer-Policy":\s*"no-referrer"/);
   assert.match(xSource, /export const completeOAuthCallback = internalAction\(\{/);
@@ -151,7 +154,7 @@ test("X token refresh uses refresh_token grant and stores rotated tokens", async
 });
 
 test("subscriber workspace exposes the X account connection flow", async () => {
-  const source = await read("app/page.tsx");
+  const source = await read("components/settings-workspace.tsx");
 
   assert.match(source, /api\.x\.connectionStatus/);
   assert.match(source, /api\.x\.startConnection/);

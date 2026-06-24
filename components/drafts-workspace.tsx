@@ -35,48 +35,63 @@ type ActiveAccess = {
   postsRemaining: number;
 };
 
-export function DraftsWorkspace() {
+export function DraftsWorkspace({ embedded = false }: { embedded?: boolean } = {}) {
   const access = useQuery(api.billing.currentAccess);
+  const Root = embedded ? "div" : "main";
 
   if (access === undefined) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f3efe7] px-6 text-[#181411]">
-        <p className="text-sm font-medium text-[#786f64]">
+      <Root
+        className={`flex items-center justify-center px-6 text-zinc-950 ${
+          embedded ? "min-h-[420px]" : "min-h-screen bg-zinc-50"
+        }`}
+      >
+        <p className="text-sm font-medium text-zinc-600">
           Loading drafts workspace...
         </p>
-      </main>
+      </Root>
     );
   }
 
   if (access.state !== "active") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f3efe7] px-6 text-[#181411]">
-        <section className="w-full max-w-md rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-          <p className="text-sm font-semibold text-[#2f8a67]">
+      <Root
+        className={`flex items-center justify-center px-6 text-zinc-950 ${
+          embedded ? "min-h-[420px]" : "min-h-screen bg-zinc-50"
+        }`}
+      >
+        <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-7">
+          <p className="text-sm font-semibold text-emerald-700">
             Drafts workspace
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal">
             Subscribe before reviewing drafts.
           </h1>
-          <p className="mt-3 text-sm leading-6 text-[#625a51]">
+          <p className="mt-3 text-sm leading-6 text-zinc-600">
             Return to the Dispatch workspace to choose a plan and connect your
             accounts.
           </p>
           <Link
-            className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
+            className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
             href="/"
           >
             Back to workspace
           </Link>
         </section>
-      </main>
+      </Root>
     );
   }
 
-  return <ActiveDraftsWorkspace access={access} />;
+  return <ActiveDraftsWorkspace access={access} embedded={embedded} />;
 }
 
-function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
+function ActiveDraftsWorkspace({
+  access,
+  embedded,
+}: {
+  access: ActiveAccess;
+  embedded: boolean;
+}) {
   const connectedRepos = useQuery(api.github.connectedRepos);
   const drafts = useQuery(api.drafts.listForReview);
   const postDraft = useAction(api.x.postDraft);
@@ -236,50 +251,49 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
     access.plan === "good"
       ? "Upgrade to Better to keep posting this period."
       : `Your Better plan renews on ${formatDate(access.currentPeriodEnd)}.`;
+  const Root = embedded ? "div" : "main";
 
   return (
-    <main className="min-h-screen bg-[#f3efe7] p-3 text-[#181411] sm:p-5 lg:p-7">
-      <div className="grid min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[28px] bg-[#fffaf2] shadow-[0_24px_80px_rgba(15,23,42,0.18)] ring-1 ring-[#d8cebf] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-3.5rem)] lg:grid-cols-[minmax(360px,380px)_minmax(0,1fr)]">
-        <aside className="min-w-0 bg-[#171411] text-white lg:min-h-full">
-          <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 lg:px-6 lg:py-7">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase text-[#69d4a1]">
-                Dispatch
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-                Drafts
-              </h1>
-              <p className="mt-2 text-xs leading-5 text-white/50">
-                Pick a commit, tune the post, ship it.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
-                href="/settings"
-              >
-                Settings
-              </Link>
-              <Link
-                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white"
-                href="/"
-              >
-                Home
-              </Link>
-            </div>
+    <Root
+      className={`text-zinc-950 ${
+        embedded ? "grid gap-6" : "min-h-screen bg-zinc-50 p-4 sm:p-6 lg:p-8"
+      }`}
+    >
+      <header className="border-b border-zinc-200 pb-5">
+        <div>
+          <p className="text-sm font-semibold text-emerald-700">Drafts</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-normal">
+            Review commit drafts.
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
+            Pick a commit, tune the generated post, and publish when it feels
+            ready.
+          </p>
+        </div>
+      </header>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.25fr)]">
+        <aside className="min-w-0 rounded-lg border border-zinc-200 bg-white">
+          <div className="border-b border-zinc-200 p-5">
+            <h2 className="text-lg font-semibold tracking-normal">
+              Draft queue
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-zinc-600">
+              Newest commit drafts across connected repositories.
+            </p>
           </div>
 
           {isLoading ? (
-            <p className="px-6 py-5 text-sm text-white/50">
+            <p className="px-5 py-5 text-sm text-zinc-500">
               Loading repositories...
             </p>
           ) : !hasConnectedRepos && !hasDrafts ? (
-            <p className="px-6 py-5 text-sm leading-6 text-white/50">
+            <p className="px-5 py-5 text-sm leading-6 text-zinc-600">
               Connect a repository first. Open settings to choose the GitHub
               repo Dispatch should watch.
             </p>
           ) : (
-            <div className="grid max-h-[44vh] min-w-0 gap-2 overflow-y-auto px-3 py-4 lg:max-h-[calc(100vh-156px)] lg:px-4">
+            <div className="grid max-h-[48vh] min-w-0 gap-4 overflow-y-auto p-4 xl:max-h-[calc(100vh-260px)]">
               {repoSections.map((repo) => (
                 <RepoDraftGroup
                   drafts={draftGroups.get(repo.fullName) ?? []}
@@ -293,10 +307,10 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
           )}
         </aside>
 
-        <section className="flex min-h-[70vh] items-start justify-center overflow-y-auto bg-[#f3efe7] px-4 py-6 sm:px-8 lg:px-12 lg:py-10">
+        <section className="min-w-0">
           {isLoading ? (
-            <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-              <p className="text-sm font-semibold text-[#2f8a67]">
+            <div className="rounded-lg border border-zinc-200 bg-white p-6">
+              <p className="text-sm font-semibold text-emerald-700">
                 Draft detail
               </p>
               <h2 className="mt-2 text-3xl font-semibold tracking-normal">
@@ -336,7 +350,7 @@ function ActiveDraftsWorkspace({ access }: { access: ActiveAccess }) {
           )}
         </section>
       </div>
-    </main>
+    </Root>
   );
 }
 
@@ -349,20 +363,18 @@ function DraftsEmptyState({
 }) {
   if (!hasConnectedRepos) {
     return (
-      <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p className="text-sm font-semibold text-[#2f8a67]">
-          Draft detail
-        </p>
+      <div className="rounded-lg border border-zinc-200 bg-white p-6">
+        <p className="text-sm font-semibold text-emerald-700">Draft detail</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-normal">
           Connect a repository first.
         </h2>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+        <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-600">
           Dispatch needs one GitHub repo before it can turn commits into X
           drafts.
         </p>
         <Link
-          className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
-          href="/settings"
+          className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+          href="/dashboard/settings"
         >
           Open settings
         </Link>
@@ -372,20 +384,18 @@ function DraftsEmptyState({
 
   if (!hasDrafts) {
     return (
-      <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-        <p className="text-sm font-semibold text-[#2f8a67]">
-          Draft detail
-        </p>
+      <div className="rounded-lg border border-zinc-200 bg-white p-6">
+        <p className="text-sm font-semibold text-emerald-700">Draft detail</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-normal">
           No commit drafts yet.
         </h2>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+        <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-600">
           Push to a connected repository and Dispatch will drop the generated
           variants here.
         </p>
         <Link
-          className="mt-5 inline-flex h-10 items-center rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f]"
-          href="/settings"
+          className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+          href="/dashboard/settings"
         >
           Open settings
         </Link>
@@ -394,12 +404,12 @@ function DraftsEmptyState({
   }
 
   return (
-    <div className="w-full max-w-3xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
-      <p className="text-sm font-semibold text-[#2f8a67]">Draft detail</p>
+    <div className="rounded-lg border border-zinc-200 bg-white p-6">
+      <p className="text-sm font-semibold text-emerald-700">Draft detail</p>
       <h2 className="mt-2 text-3xl font-semibold tracking-normal">
         Select a commit draft.
       </h2>
-      <p className="mt-3 max-w-xl text-sm leading-6 text-[#625a51]">
+      <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-600">
         Choose a commit from the sidebar to review variants, edit the post,
         attach an image, and publish to X.
       </p>
@@ -419,13 +429,13 @@ function RepoDraftGroup({
   setSelectedDraftId: (draftId: string) => void;
 }) {
   return (
-    <section className="min-w-0 rounded-2xl px-2 py-3">
-      <h2 className="break-words px-2 text-sm font-semibold tracking-normal text-white/90">
+    <section className="min-w-0">
+      <h2 className="break-words text-sm font-semibold tracking-normal text-zinc-950">
         {repo.fullName}
       </h2>
 
       {drafts.length === 0 ? (
-        <p className="mt-3 px-2 text-xs leading-5 text-white/35">
+        <p className="mt-2 text-sm leading-6 text-zinc-500">
           No commit drafts yet.
         </p>
       ) : (
@@ -436,10 +446,10 @@ function RepoDraftGroup({
             return (
               <button
                 aria-pressed={isSelected}
-                className={`w-full min-w-0 rounded-2xl border px-3.5 py-3 text-left text-sm transition-all ${
+                className={`w-full min-w-0 rounded-md border px-3.5 py-3 text-left text-sm transition-colors ${
                   isSelected
-                    ? "border-[#f5d08a] bg-[#fff1d4] text-[#171411] shadow-[0_10px_30px_rgba(0,0,0,0.18)]"
-                    : "border-white/5 bg-white/[0.04] text-white/70 hover:border-white/15 hover:bg-white/[0.08] hover:text-white"
+                    ? "border-zinc-950 bg-zinc-950 text-white"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 hover:bg-white"
                 }`}
                 key={draft._id}
                 onClick={() => setSelectedDraftId(draft._id)}
@@ -452,8 +462,8 @@ function RepoDraftGroup({
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
                       isSelected
-                        ? "bg-[#171411] text-white"
-                        : "bg-white/10 text-white/60"
+                        ? "bg-white text-zinc-950"
+                        : "bg-zinc-200 text-zinc-600"
                     }`}
                   >
                     {draft.status}
@@ -525,20 +535,20 @@ function DraftEditorCanvas({
   }
 
   return (
-    <article className="w-full max-w-4xl rounded-[28px] border border-[#ded4c5] bg-[#fffdf8] p-5 shadow-[0_24px_80px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
-      <div className="flex flex-col gap-4 border-b border-[#e7ded0] pb-6 sm:flex-row sm:items-start sm:justify-between">
+    <article className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6">
+      <div className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase text-[#2f8a67]">
+          <p className="text-sm font-semibold text-emerald-700">
             Draft detail
           </p>
-          <h2 className="mt-2 break-words text-3xl font-semibold tracking-normal text-[#181411]">
+          <h2 className="mt-1 break-words text-2xl font-semibold tracking-normal text-zinc-950">
             {draft.repoFullName}
           </h2>
-          <p className="mt-2 break-words text-sm text-[#7b7166]">
+          <p className="mt-2 break-words text-sm text-zinc-500">
             {draft.commitSha.slice(0, 7)} · {draft.commitMessage}
           </p>
         </div>
-        <span className="w-fit rounded-full border border-[#ded4c5] bg-[#f8f2e9] px-3 py-1 text-xs font-semibold capitalize text-[#625a51]">
+        <span className="w-fit rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold capitalize text-zinc-600">
           {draft.status}
         </span>
       </div>
@@ -546,7 +556,7 @@ function DraftEditorCanvas({
       {draft.status === "posted" && draft.xPostId ? (
         <p
           aria-live="polite"
-          className="mt-5 rounded-2xl border border-[#bfe5d1] bg-[#ebf8ef] px-4 py-3 text-sm font-semibold text-[#1c7d53]"
+          className="mt-5 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"
           role="status"
         >
           Posted to X: {draft.xPostId}
@@ -555,7 +565,7 @@ function DraftEditorCanvas({
 
       {isCapped ? (
         <div
-          className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
+          className="mt-5 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"
           role="alert"
         >
           <p className="font-semibold">Monthly post cap reached.</p>
@@ -567,10 +577,10 @@ function DraftEditorCanvas({
       ) : null}
 
       {draft.variants.length === 0 ? (
-        <p className="mt-6 text-sm text-[#7b7166]">Generating variants...</p>
+        <p className="mt-6 text-sm text-zinc-500">Generating variants...</p>
       ) : (
         <div className="mt-6 grid gap-3">
-          <p className="text-sm font-semibold text-[#181411]">
+          <p className="text-sm font-semibold text-zinc-950">
             Choose a variant
           </p>
           {draft.variants.map((variant) => {
@@ -579,10 +589,10 @@ function DraftEditorCanvas({
             return (
               <button
                 aria-pressed={isSelectedVariant}
-                className={`rounded-2xl border p-4 text-left text-sm leading-6 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:opacity-60 ${
+                className={`rounded-md border p-4 text-left text-sm leading-6 transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   isSelectedVariant
-                    ? "border-[#181411] bg-white text-[#181411] shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
-                    : "border-[#e5dbcb] bg-[#fffaf2] text-[#625a51] hover:border-[#d4c6b3]"
+                    ? "border-zinc-950 bg-white text-zinc-950"
+                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-white"
                 }`}
                 disabled={draft.status !== "draft"}
                 key={variant}
@@ -591,7 +601,7 @@ function DraftEditorCanvas({
               >
                 <span>{variant}</span>
                 {isSelectedVariant ? (
-                  <span className="mt-3 block w-fit rounded-full bg-[#181411] px-2.5 py-1 text-xs font-semibold text-white">
+                  <span className="mt-3 block w-fit rounded-md bg-zinc-950 px-2.5 py-1 text-xs font-semibold text-white">
                     Selected variant
                   </span>
                 ) : null}
@@ -603,28 +613,28 @@ function DraftEditorCanvas({
 
       <textarea
         aria-label="Post text"
-        className="mt-6 min-h-36 w-full resize-y rounded-2xl border border-[#d8cebf] bg-white p-5 text-base leading-7 text-[#181411] outline-none transition-colors placeholder:text-[#a79c90] focus:border-[#181411] disabled:cursor-not-allowed disabled:bg-[#f7f1e8]"
+        className="mt-6 min-h-36 w-full resize-y rounded-md border border-zinc-300 bg-white p-4 text-base leading-7 text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-50"
         disabled={draft.status !== "draft"}
         maxLength={280}
         onChange={(event) => onTextChange(event.target.value)}
         value={selectedText}
       />
-      <p className="mt-2 text-right text-xs font-medium text-[#7b7166]">
+      <p className="mt-2 text-right text-xs font-medium text-zinc-500">
         {selectedText.length}/280
       </p>
 
-      <div className="mt-6 grid gap-3 rounded-2xl border border-[#e5dbcb] bg-[#f8f2e9] p-4">
+      <div className="mt-6 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
         <label className="block text-sm">
-          <span className="font-semibold text-[#181411]">Optional image</span>
+          <span className="font-semibold text-zinc-950">Optional image</span>
           <input
             accept="image/png,image/jpeg,image/webp"
-            className="mt-3 block w-full text-sm text-[#625a51] file:mr-4 file:rounded-full file:border-0 file:bg-[#181411] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            className="mt-3 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
             disabled={draft.status !== "draft" || isUploading}
             onChange={(event) => onUpload(event.currentTarget.files?.[0] ?? null)}
             type="file"
           />
         </label>
-        <p className="text-xs text-[#7b7166]">
+        <p className="text-xs text-zinc-500">
           {draft.mediaId ? "Image attached." : "Text-only is ready."}
         </p>
       </div>
@@ -632,7 +642,7 @@ function DraftEditorCanvas({
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           aria-describedby={postReadinessId}
-          className="h-11 rounded-full bg-[#181411] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#2a241f] disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!canPost}
           onClick={onPost}
           type="button"
@@ -645,16 +655,16 @@ function DraftEditorCanvas({
           role="status"
         >
           <p
-            className="rounded-full bg-[#f8f2e9] px-3 py-1.5 text-sm font-semibold text-[#625a51]"
+            className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-semibold text-zinc-600"
             id={postReadinessId}
           >
             {postReadinessMessage}
           </p>
           {isUploading ? (
-            <p className="text-sm text-[#7b7166]">Uploading image...</p>
+            <p className="text-sm text-zinc-500">Uploading image...</p>
           ) : null}
           {notice ? (
-            <p className="rounded-full bg-[#ebf8ef] px-3 py-1.5 text-sm font-semibold text-[#1c7d53]">
+            <p className="rounded-md bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
               {notice}
             </p>
           ) : null}
@@ -663,7 +673,7 @@ function DraftEditorCanvas({
 
       {error ? (
         <div
-          className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800"
+          className="mt-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800"
           role="alert"
         >
           {error}

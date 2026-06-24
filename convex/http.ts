@@ -355,6 +355,7 @@ async function hasAllowedImageSignature(file: File) {
 
 function redirectToApp(query: string) {
   const url = new URL(env.APP_URL);
+  url.pathname = "/dashboard/settings";
   url.search = query;
 
   return new Response(null, {

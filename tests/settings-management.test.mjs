@@ -16,13 +16,16 @@ async function pathExists(path) {
   }
 }
 
-test("/settings route renders the settings workspace", async () => {
+test("/dashboard/settings route renders the settings workspace and /settings redirects", async () => {
   assert.equal(await pathExists("app/settings/page.tsx"), true);
+  assert.equal(await pathExists("app/dashboard/settings/page.tsx"), true);
   assert.equal(await pathExists("components/settings-workspace.tsx"), true);
 
-  const pageSource = await read("app/settings/page.tsx");
+  const legacyPageSource = await read("app/settings/page.tsx");
+  const pageSource = await read("app/dashboard/settings/page.tsx");
   const settingsSource = await read("components/settings-workspace.tsx");
 
+  assert.match(legacyPageSource, /redirect\(`\/dashboard\/settings\?\$\{query\}`\)/);
   assert.match(pageSource, /SettingsWorkspace/);
   assert.match(settingsSource, /api\.billing\.currentAccess/);
   assert.match(settingsSource, /api\.billing\.createBillingPortal/);
@@ -34,7 +37,14 @@ test("/settings route renders the settings workspace", async () => {
   assert.match(settingsSource, /Install GitHub App/);
   assert.match(settingsSource, /Disconnect/);
   assert.match(settingsSource, /Open billing portal/);
+  assert.match(settingsSource, /<BillingPortalPanel access=\{access\}/);
+  assert.doesNotMatch(settingsSource, /Billing lives in the dedicated dashboard billing area/);
   assert.match(settingsSource, /window\.location\.assign\(portal\.url\)/);
+  assert.match(settingsSource, /Workspace settings\./);
+  assert.match(settingsSource, /rounded-lg border border-zinc-200 bg-white/);
+  assert.match(settingsSource, /const Root = embedded \? "div" : "main"/);
+  assert.doesNotMatch(settingsSource, /UserButton|<Show/);
+  assert.doesNotMatch(settingsSource, /href="\/dashboard\/drafts"|href="\/dashboard"/);
 });
 
 test("GitHub exposes a server-authorized local disconnect mutation", async () => {
@@ -168,14 +178,14 @@ test("billing portal action fetches a fresh Lemon Squeezy customer portal URL", 
   assert.doesNotMatch(schema, /customerPortal|billingPortal|portalUrl/);
 });
 
-test("home and drafts link to settings while settings owns repo management", async () => {
+test("home and drafts link to dashboard settings while settings owns repo management", async () => {
   const homeSource = await read("app/page.tsx");
   const draftsSource = await read("components/drafts-workspace.tsx");
 
-  assert.match(homeSource, /href="\/settings"/);
-  assert.match(homeSource, /Manage settings/);
-  assert.match(draftsSource, /href="\/settings"/);
-  assert.match(draftsSource, /Settings/);
+  assert.match(homeSource, /href="\/dashboard"/);
+  assert.match(homeSource, /Open dashboard/);
+  assert.match(draftsSource, /href="\/dashboard\/settings"/);
+  assert.match(draftsSource, /Open settings/);
   assert.doesNotMatch(homeSource, /function GitHubRepoPanel/);
   assert.doesNotMatch(homeSource, /api\.github\.connectedRepos/);
 });
