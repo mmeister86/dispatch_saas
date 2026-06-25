@@ -1,11 +1,11 @@
 ---
 id: TASK-28
 title: 'T-034: Comparison table vs "ChatGPT + copy-paste"'
-status: To Do
+status: Done
 assignee:
   - Codex
 created_date: '2026-06-17 07:32'
-updated_date: '2026-06-25 14:37'
+updated_date: '2026-06-25 20:44'
 labels:
   - imported-from-docs
   - phase-3
@@ -42,4 +42,12 @@ Implement on branch `codex/launch-readiness-30-36` using TDD. RED: assert compar
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented and verified the comparison table against ChatGPT + copy-paste with the expected Dispatch workflow rows.
+
+Implemented the TASK-28 comparison table in components/compare3.tsx and added the focused PRD row assertions to tests/landing-block-skeleton.test.mjs. Focused RED/GREEN check completed with pnpm exec node --test tests/landing-block-skeleton.test.mjs.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Updated the landing comparison block to replace the shadcnblocks Acme/Biz placeholder with the PRD §9 comparison against ChatGPT + copy-paste. Added focused assertions for all required rows, timing values, and placeholder removal in tests/landing-block-skeleton.test.mjs. Verified with pnpm exec node --test tests/landing-block-skeleton.test.mjs (9/9 passing). Full suite/build intentionally not run per the approved minimal TASK-28 plan.
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -171,6 +171,43 @@ test("pricing block and header use the approved Good and Better offer", async ()
   assert.doesNotMatch(pricingSource, /Yearly/);
 });
 
+test("comparison block uses the PRD ChatGPT copy-paste rows", async () => {
+  const source = await read("components/compare3.tsx");
+  const expectedRows = [
+    "Pulls your commits automatically",
+    "Knows your build context",
+    "Build-in-public voice by default",
+    "One-click post to X",
+    "Time per tweet",
+    "Survives past week 1",
+  ];
+  const placeholderRows = [
+    "Acme",
+    "Biz",
+    "Team Overview",
+    "Custom Branding",
+    "API Access",
+    "Advanced Analytics",
+    "Customer Support",
+    "shadcnblocks.com",
+  ];
+
+  assert.match(source, /ChatGPT \+ copy-paste/);
+  assert.match(source, /Dispatch/);
+
+  for (const row of expectedRows) {
+    assert.match(source, new RegExp(row));
+  }
+
+  assert.match(source, /~10 min/);
+  assert.match(source, /~20 sec/);
+  assert.match(source, /rarely/);
+
+  for (const placeholder of placeholderRows) {
+    assert.doesNotMatch(source, new RegExp(placeholder));
+  }
+});
+
 test("landing skeleton keeps Task-25 demo and later website copy out of scope", async () => {
   const pageSource = await read("app/page.tsx");
   const featureSource = await read("components/feature276.tsx");

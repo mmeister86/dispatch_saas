@@ -1,20 +1,44 @@
-import {
-  BadgePercent,
-  CheckCircle,
-  CircleMinus,
-  Code2,
-  Headset,
-  LineChart,
-  Users,
-} from "lucide-react";
+import { CheckCircle, CircleMinus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Compare3Props {
   className?: string;
 }
+
+const COMPARISON_ROWS = [
+  {
+    feature: "Pulls your commits automatically",
+    chatgpt: "No",
+    dispatch: "Yes",
+  },
+  {
+    feature: "Knows your build context",
+    chatgpt: "No",
+    dispatch: "Yes",
+  },
+  {
+    feature: "Build-in-public voice by default",
+    chatgpt: "No",
+    dispatch: "Yes",
+  },
+  {
+    feature: "One-click post to X",
+    chatgpt: "No",
+    dispatch: "Yes",
+  },
+  {
+    feature: "Time per tweet",
+    chatgpt: "~10 min",
+    dispatch: "~20 sec",
+  },
+  {
+    feature: "Survives past week 1",
+    chatgpt: "rarely",
+    dispatch: "Yes",
+  },
+];
 
 const Compare3 = ({ className }: Compare3Props) => {
   return (
@@ -23,126 +47,92 @@ const Compare3 = ({ className }: Compare3Props) => {
         <div className="flex flex-col items-center gap-4">
           <Badge variant="outline">Comparison</Badge>
           <h2 className="mx-auto max-w-2xl text-center text-4xl font-semibold sm:text-5xl">
-            See how Acme stacks up against the competition
+            Dispatch beats the copy-paste workflow.
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-muted-foreground">
-            Discover why our customers choose Acme over other document
-            management solutions
+            ChatGPT + copy-paste can rewrite a prompt. Dispatch turns your real
+            commits into build-in-public drafts without the manual loop.
           </p>
         </div>
+
         <div className="-mx-7 overflow-x-auto">
           <div className="mt-14 grid min-w-2xl grid-cols-3">
-            <div className="border-b border-border p-5"></div>
-            <div className="flex flex-col items-center gap-2 rounded-t-2xl border-b border-border bg-muted p-5">
-              <img
-                src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/block-1.svg"
-                alt="Acme logo"
-                className="size-8"
-              />
-              <p className="text-lg font-semibold">Acme</p>
-              <p className="mt-1 text-center text-sm text-muted-foreground">
-                Built with customer needs in mind
+            <div className="border-b border-border p-5" />
+            <div className="flex flex-col items-center justify-center gap-2 rounded-t-2xl border-b border-border p-5 text-center">
+              <p className="text-lg font-semibold">ChatGPT + copy-paste</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Manual prompts, manual rewrites, manual posting
               </p>
             </div>
-            <div className="flex flex-col items-center gap-2 border-b border-border p-5">
-              <img
-                src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/block-2.svg"
-                alt="Biz logo"
-                className="size-8"
-              />
-              <p className="text-lg font-semibold">Biz</p>
-              <p className="mt-1 text-center text-sm text-muted-foreground">
-                A popular alternative solution
+            <div className="flex flex-col items-center justify-center gap-2 rounded-t-2xl border-b border-border bg-muted p-5 text-center">
+              <p className="text-lg font-semibold">Dispatch</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Built for commits, context, and posting momentum
               </p>
             </div>
-            <div className="flex items-center gap-2 border-b border-border p-5">
-              <Users className="size-4 shrink-0" />
-              <span className="font-semibold">Team Overview</span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border bg-muted p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">
-                Comprehensive dashboard
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border p-5">
-              <CircleMinus className="size-5 text-red-600" />
-              <span className="text-xs text-muted-foreground">
-                Basic overview only
-              </span>
-            </div>
-            <div className="flex items-center gap-2 border-b border-border p-5">
-              <BadgePercent className="size-4 shrink-0" />
-              <span className="font-semibold">Custom Branding</span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border bg-muted p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">
-                Full customization
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">
-                Limited options
-              </span>
-            </div>
-            <div className="flex items-center gap-2 border-b border-border p-5">
-              <Code2 className="size-4 shrink-0" />
-              <span className="font-semibold">API Access</span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border bg-muted p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">Robust API</span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border p-5">
-              <CircleMinus className="size-5 text-red-600" />
-              <span className="text-xs text-muted-foreground">
-                No API available
-              </span>
-            </div>
-            <div className="flex items-center gap-2 border-b border-border p-5">
-              <LineChart className="size-4 shrink-0" />
-              <span className="font-semibold">Advanced Analytics</span>
-              <Badge variant="secondary">Soon</Badge>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border bg-muted p-5">
-              <CircleMinus className="size-5 text-red-600" />
-              <span className="text-xs text-muted-foreground">
-                Coming Q3 2025
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-b border-border p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">
-                Basic reporting
-              </span>
-            </div>
-            <div className="flex items-center gap-2 border-border p-5">
-              <Headset className="size-4 shrink-0" />
-              <span className="font-semibold">Customer Support</span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 border-border bg-muted p-5">
-              <CheckCircle className="size-5 text-green-600" />
-              <span className="text-xs text-muted-foreground">
-                24/7 dedicated team
-              </span>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2 p-5">
-              <CircleMinus className="size-5 text-red-600" />
-              <span className="text-xs text-muted-foreground">
-                Email support only
-              </span>
-            </div>
-            <div className="border-border p-5"></div>
-            <div className="flex items-center justify-center gap-2 rounded-b-2xl border-border bg-muted p-5">
-              <Button className="w-full">Try Acme today</Button>
-            </div>
+
+            {COMPARISON_ROWS.map((row, index) => {
+              const isLastRow = index === COMPARISON_ROWS.length - 1;
+              const borderClass = isLastRow ? "border-border" : "border-b border-border";
+
+              return (
+                <div className="contents" key={row.feature}>
+                  <div
+                    className={cn(
+                      "flex items-center p-5 font-semibold",
+                      borderClass,
+                    )}
+                  >
+                    {row.feature}
+                  </div>
+                  <ComparisonValue
+                    className={cn("p-5", borderClass)}
+                    isPositive={false}
+                    value={row.chatgpt}
+                  />
+                  <ComparisonValue
+                    className={cn("bg-muted p-5", borderClass)}
+                    isPositive
+                    value={row.dispatch}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
     </section>
   );
 };
+
+function ComparisonValue({
+  className,
+  isPositive,
+  value,
+}: {
+  className?: string;
+  isPositive: boolean;
+  value: string;
+}) {
+  const isBooleanValue = value === "Yes" || value === "No";
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-2 text-center",
+        className,
+      )}
+    >
+      {isBooleanValue ? (
+        isPositive ? (
+          <CheckCircle className="size-5 text-green-600" />
+        ) : (
+          <CircleMinus className="size-5 text-red-600" />
+        )
+      ) : null}
+      <span className="text-sm text-muted-foreground">{value}</span>
+    </div>
+  );
+}
 
 export { Compare3 };
