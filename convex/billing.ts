@@ -350,12 +350,15 @@ async function createLemonBillingPortal(subscriptionId: string) {
     data?: {
       attributes?: {
         urls?: {
+          customer_portal_update_subscription?: unknown;
           customer_portal?: unknown;
         };
       };
     };
   };
-  const url = payload.data?.attributes?.urls?.customer_portal;
+  const url =
+    payload.data?.attributes?.urls?.customer_portal_update_subscription ??
+    payload.data?.attributes?.urls?.customer_portal;
 
   if (typeof url !== "string" || url.length === 0) {
     throw new Error("Lemon Squeezy did not return a billing portal URL.");

@@ -208,8 +208,8 @@ export function BillingWorkspace() {
           Plan and usage
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-          Open the Lemon Squeezy portal, check renewal timing, and keep an eye
-          on the monthly post cap.
+          Manage your Lemon Squeezy subscription, check renewal timing, and
+          keep an eye on the monthly post cap.
         </p>
       </header>
       <BillingPortalPanel access={access} />
@@ -241,11 +241,10 @@ function BillingPortalPanel({ access }: { access: ActiveAccess }) {
         <div>
           <p className="text-sm font-medium text-zinc-500">Subscription</p>
           <h2 className="mt-2 text-xl font-semibold tracking-normal">
-            Manage billing
+            Manage subscription
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-600">
-            Open Lemon Squeezy to update payment details, invoices, and your
-            subscription.
+            Open Lemon Squeezy to cancel, upgrade, or update your subscription.
           </p>
         </div>
         <button
@@ -254,7 +253,7 @@ function BillingPortalPanel({ access }: { access: ActiveAccess }) {
           onClick={() => void handleOpenPortal()}
           type="button"
         >
-          {isOpeningPortal ? "Opening..." : "Open billing portal"}
+          {isOpeningPortal ? "Opening..." : "Manage subscription"}
         </button>
       </div>
 
