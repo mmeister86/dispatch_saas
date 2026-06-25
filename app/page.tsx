@@ -9,6 +9,14 @@ import {
 import { useAction, useQuery } from "convex/react";
 import Link from "next/link";
 import { useState } from "react";
+import { Compare3 } from "@/components/compare3";
+import { Faq15 } from "@/components/faq15";
+import { Feature276 } from "@/components/feature276";
+import { Footer24 } from "@/components/footer24";
+import { Hero233 } from "@/components/hero233";
+import { Navbar11 } from "@/components/navbar11";
+import { Pricing7 } from "@/components/pricing7";
+import { Testimonial17 } from "@/components/testimonial17";
 import { api } from "@/convex/_generated/api";
 
 type ActiveAccess = {
@@ -22,39 +30,51 @@ type ActiveAccess = {
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-12 text-black">
-      <section className="flex w-full max-w-2xl flex-col gap-8">
-        <div className="flex items-center justify-between gap-4 border-b border-black/10 pb-5">
-          <div>
-            <p className="text-sm font-medium text-emerald-700">Dispatch</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal">
-              Commit-to-post workspace
-            </h1>
-          </div>
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-        </div>
+    <main>
+      <Show when="signed-out">
+        <LandingSkeleton />
+      </Show>
 
-        <Show when="signed-out">
-          <div className="flex flex-col gap-5">
-            <p className="text-lg leading-8 text-zinc-700">
-              Sign in with GitHub to subscribe and unlock your Dispatch
-              workspace.
-            </p>
-            <SignInButton mode="modal">
-              <button className="h-11 w-fit border border-black bg-black px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-800">
-                Sign in with GitHub
-              </button>
-            </SignInButton>
-          </div>
-        </Show>
+      <Show when="signed-in">
+        <section className="flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-12 text-black">
+          <div className="flex w-full max-w-2xl flex-col gap-8">
+            <div className="flex items-center justify-between gap-4 border-b border-black/10 pb-5">
+              <div>
+                <p className="text-sm font-medium text-emerald-700">
+                  Dispatch
+                </p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-normal">
+                  Commit-to-post workspace
+                </h1>
+              </div>
+              <UserButton />
+            </div>
 
-        <Show when="signed-in">
-          <GuardedApp />
-        </Show>
-      </section>
+            <GuardedApp />
+          </div>
+        </section>
+      </Show>
     </main>
+  );
+}
+
+function LandingSkeleton() {
+  return (
+    <div className="landing-skeleton-light bg-background text-foreground">
+      <Navbar11 />
+      <Hero233 />
+      <Feature276 />
+      <Pricing7 />
+      <Compare3 />
+      <Testimonial17 />
+      <Faq15 />
+      <Footer24 />
+      <div className="sr-only">
+        <SignInButton mode="modal">
+          <button type="button">Sign in with GitHub</button>
+        </SignInButton>
+      </div>
+    </div>
   );
 }
 
