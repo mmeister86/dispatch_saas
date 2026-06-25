@@ -1,10 +1,10 @@
 "use client";
 
+import { SignInButton } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import React from "react";
 
-import { LineShadowText } from "@/components/ui/line-shadow-text";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -30,38 +30,27 @@ const Hero233 = ({ className }: Hero233Props) => {
           className="text-md group my-16 flex w-fit items-center justify-center gap-3 rounded-full bg-muted/60 px-5 py-1 tracking-tight md:my-5"
         >
           <span className="size-2 rounded-full bg-foreground" />
-          <span>Flexible Plan customized for you</span>
+          <span>Built for indie builders shipping in public</span>
         </Button>
         <div className="relative flex max-w-4xl items-center justify-center text-center text-5xl font-medium tracking-tight md:text-7xl">
           <h1 className="relative z-10">
-            <span className="mr-3 text-muted-foreground/50">
-              The only app you Need to Stay
-            </span>
-            <LineShadowText> Productive </LineShadowText>
-            <span className="text-muted-foreground/50"> ever</span>
-            <span>.</span>
+            {"Turn commits into tweets you'd actually post."}
           </h1>
         </div>
 
         <p className="mt-5 max-w-xl bg-background text-muted-foreground/80">
-          Lorem ipsum dolor sit, amet consectetur adipisicing elit. Ipsum animi,
-          ipsam provident optio delectus neque aliquid cumque. Beatae, odio!
+          Dispatch reads your latest GitHub commit, finds the build-in-public angle, and gives you 2-3 post-ready drafts in seconds.
         </p>
-        <div className="my-5 flex gap-4">
-          <Button
-            variant="secondary"
-            className="text-md group flex w-fit items-center justify-center gap-2 rounded-full px-4 py-1 tracking-tight"
-          >
-            <span>Documentation</span>
-            <ArrowRight className="size-4 -rotate-45 transition-all ease-out group-hover:ml-3 group-hover:rotate-0" />
-          </Button>
-          <Button
-            variant="default"
-            className="text-md group flex w-fit items-center justify-center gap-2 rounded-full px-4 py-1 tracking-tight"
-          >
-            <span>Get Started</span>
-            <ArrowRight className="size-4 -rotate-45 transition-all ease-out group-hover:ml-3 group-hover:rotate-0" />
-          </Button>
+        <div className="my-5">
+          <SignInButton mode="modal">
+            <Button
+              variant="default"
+              className="text-md group flex w-fit items-center justify-center gap-2 rounded-full px-4 py-1 tracking-tight"
+            >
+              <span>Get your first draft</span>
+              <ArrowRight className="size-4 -rotate-45 transition-all ease-out group-hover:ml-3 group-hover:rotate-0" />
+            </Button>
+          </SignInButton>
         </div>
       </div>
 

@@ -58,8 +58,53 @@ test("dashboard overview derives status from existing Convex data and real X ana
   assert.equal(await pathExists("components/dashboard/dashboard-overview.tsx"), true);
 
   const overviewSource = await read("components/dashboard/dashboard-overview.tsx");
+  const sidebarSource = await read("components/dashboard/app-sidebar.tsx");
 
   assert.match(overviewSource, /api\.billing\.currentAccess/);
+  assert.match(overviewSource, /import \{ Skeleton \} from "@\/components\/ui\/skeleton"/);
+  assert.match(overviewSource, /useUser/);
+  assert.match(overviewSource, /isLoaded/);
+  assert.match(overviewSource, /isSignedIn/);
+  assert.match(
+    overviewSource,
+    /access\.state === "signedOut" && isSignedIn[\s\S]*return null;/,
+  );
+  assert.match(overviewSource, /SignInButton/);
+  assert.match(overviewSource, /access === undefined[\s\S]*return null;/);
+  assert.match(overviewSource, /Sign in to open the dashboard\./);
+  assert.doesNotMatch(overviewSource, /Checking access\.\.\./);
+  assert.doesNotMatch(overviewSource, /Loading dashboard\./);
+  assert.doesNotMatch(
+    overviewSource,
+    /checking your subscription before loading workspace data/i,
+  );
+  assert.match(overviewSource, /onboardingStatus === undefined[\s\S]*<DashboardOverviewSkeleton \/>/);
+  assert.match(overviewSource, /function DashboardOverviewSkeleton/);
+  assert.match(overviewSource, /<Skeleton/);
+  assert.doesNotMatch(overviewSource, /Loading onboarding\.\.\./);
+  assert.doesNotMatch(overviewSource, /Checking onboarding\./);
+  assert.doesNotMatch(overviewSource, /checking whether your first draft setup is complete/i);
+  assert.match(sidebarSource, /useUser/);
+  assert.match(sidebarSource, /import \{ Skeleton \} from "@\/components\/ui\/skeleton"/);
+  assert.match(sidebarSource, /api\.onboarding\.status/);
+  assert.match(sidebarSource, /dashboardSidebarLoading/);
+  assert.match(sidebarSource, /function SidebarSkeleton/);
+  assert.match(sidebarSource, /function SidebarFooterSkeleton/);
+  assert.match(sidebarSource, /waitingForAccess/);
+  assert.match(
+    sidebarSource,
+    /access\?\.state === "signedOut" && isSignedIn/,
+  );
+  assert.match(
+    sidebarSource,
+    /dashboardSidebarLoading[\s\S]*<SidebarSkeleton \/>/,
+  );
+  assert.match(
+    sidebarSource,
+    /dashboardSidebarLoading[\s\S]*<SidebarFooterSkeleton \/>/,
+  );
+  assert.match(sidebarSource, /<Skeleton/);
+  assert.doesNotMatch(sidebarSource, /Checking access/);
   assert.match(overviewSource, /api\.drafts\.listForReview/);
   assert.match(overviewSource, /api\.github\.connectedRepos/);
   assert.match(overviewSource, /api\.x\.connectionStatus/);
@@ -133,9 +178,16 @@ test("legacy drafts and settings routes redirect to dashboard canonical routes",
 
 test("home routes active subscribers into the dashboard instead of old workspaces", async () => {
   const homeSource = await read("app/page.tsx");
+  const navbarSource = await read("components/navbar11.tsx");
 
-  assert.match(homeSource, /href="\/dashboard"/);
-  assert.match(homeSource, /Open dashboard/);
+  assert.doesNotMatch(homeSource, /useRouter/);
+  assert.doesNotMatch(homeSource, /router\.replace\("\/dashboard"\)/);
+  assert.match(homeSource, /access\.state === "active"/);
+  assert.match(homeSource, /<LandingSkeleton dashboardHref="\/dashboard" \/>/);
+  assert.match(navbarSource, /dashboardHref\?: string/);
+  assert.match(navbarSource, /label: "Dashboard"/);
+  assert.match(navbarSource, /url: dashboardHref/);
+  assert.doesNotMatch(homeSource, /Commit-to-post workspace/);
   assert.doesNotMatch(homeSource, /href="\/drafts"/);
   assert.doesNotMatch(homeSource, /href="\/settings"/);
 });

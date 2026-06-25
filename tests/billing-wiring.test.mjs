@@ -161,11 +161,15 @@ test("home page gates the app by subscription access", async () => {
 
   assert.match(source, /useQuery\(api\.billing\.currentAccess\)/);
   assert.match(source, /PaywallView/);
-  assert.match(source, /SubscriberApp/);
+  assert.match(source, /SignedInPaywallShell/);
+  assert.match(source, /UserButton/);
+  assert.doesNotMatch(source, /router\.replace\("\/dashboard"\)/);
+  assert.match(source, /access\.state === "active"/);
+  assert.match(source, /<LandingSkeleton dashboardHref="\/dashboard" \/>/);
   assert.match(source, /Start with Good/);
   assert.match(source, /Start with Better/);
-  assert.match(source, /Connected and paid/);
-  assert.match(source, /access\.postsThisPeriod\}\/\{access\.postLimit/);
+  assert.doesNotMatch(source, /Connected and paid/);
+  assert.doesNotMatch(source, /access\.postsThisPeriod\}\/\{access\.postLimit/);
   assert.match(draftsWorkspaceSource, /Upgrade to Better to keep posting this period/);
   assert.match(draftsWorkspaceSource, /Your Better plan renews on/);
   assert.doesNotMatch(source, /api\.viewer\.current/);

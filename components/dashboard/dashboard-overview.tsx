@@ -1,7 +1,9 @@
 "use client";
 
+import { SignInButton, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 
 type ActiveAccess = {
@@ -24,30 +26,51 @@ type AnalyticsSummary = {
 };
 
 export function DashboardOverview() {
+  const { isLoaded, isSignedIn } = useUser();
   const access = useQuery(api.billing.currentAccess);
 
-  if (access === undefined) {
-    return (
-      <DashboardGate
-        actionHref="/"
-        actionLabel="Checking access..."
-        description="Dispatch is checking your subscription before loading workspace data."
-        title="Loading dashboard."
-      />
-    );
+  if (!isLoaded || access === undefined) {
+    return null;
+  }
+
+  if (access.state === "signedOut" && isSignedIn) {
+    return null;
   }
 
   if (access.state !== "active") {
+    const signedOut = access.state === "signedOut";
+
     return (
       <DashboardGate
-        actionHref="/"
-        actionLabel={access.state === "signedOut" ? "Sign in" : "Choose a plan"}
+        action={
+          signedOut ? (
+            <SignInButton mode="modal">
+              <button
+                className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+                type="button"
+              >
+                Sign in
+              </button>
+            </SignInButton>
+          ) : (
+            <Link
+              className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+              href="/"
+            >
+              Choose a plan
+            </Link>
+          )
+        }
         description={
-          access.state === "signedOut"
-            ? "Sign in with GitHub, choose a plan, then return here to manage your commit-to-post workspace."
+          signedOut
+            ? "Sign in with GitHub, then return here to manage your commit-to-post workspace."
             : "Your account needs an active subscription before Dispatch can show draft, repo, and X account data."
         }
-        title="Subscribe before opening the dashboard."
+        title={
+          signedOut
+            ? "Sign in to open the dashboard."
+            : "Subscribe before opening the dashboard."
+        }
       />
     );
   }
@@ -56,13 +79,11 @@ export function DashboardOverview() {
 }
 
 function DashboardGate({
-  actionHref,
-  actionLabel,
+  action,
   description,
   title,
 }: {
-  actionHref: string;
-  actionLabel: string;
+  action: React.ReactNode;
   description: string;
   title: string;
 }) {
@@ -74,12 +95,7 @@ function DashboardGate({
           {title}
         </h1>
         <p className="mt-3 text-sm leading-6 text-zinc-600">{description}</p>
-        <Link
-          className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
-          href={actionHref}
-        >
-          {actionLabel}
-        </Link>
+        {action}
       </div>
     </section>
   );
@@ -98,14 +114,7 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
   const repoCount = connection?.repoCount ?? 0;
 
   if (onboardingStatus === undefined) {
-    return (
-      <DashboardGate
-        actionHref="/dashboard/onboarding"
-        actionLabel="Loading onboarding..."
-        description="Dispatch is checking whether your first draft setup is complete."
-        title="Checking onboarding."
-      />
-    );
+    return <DashboardOverviewSkeleton />;
   }
 
   if (
@@ -114,8 +123,14 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
   ) {
     return (
       <DashboardGate
-        actionHref="/dashboard/onboarding"
-        actionLabel="Complete onboarding"
+        action={
+          <Link
+            className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+            href="/dashboard/onboarding"
+          >
+            Complete onboarding
+          </Link>
+        }
         description="Teach Dispatch your writing style, import recent commits from a connected repo, and generate your first real drafts."
         title="Complete onboarding before opening the dashboard."
       />
@@ -216,6 +231,73 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
             xConnected={xStatus?.connected ?? false}
           />
           <XPostAnalyticsCard analytics={analytics} />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DashboardOverviewSkeleton() {
+  return (
+    <div className="grid gap-6" aria-busy="true" aria-label="Loading dashboard">
+      <header className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="grid w-full max-w-2xl gap-3">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-9 w-full max-w-md" />
+          <Skeleton className="h-4 w-full max-w-xl" />
+          <Skeleton className="h-4 w-3/4 max-w-lg" />
+        </div>
+        <Skeleton className="h-10 w-28" />
+      </header>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {["plan", "posts", "drafts", "repos"].map((item) => (
+          <div
+            className="rounded-lg border border-zinc-200 bg-white p-4"
+            key={item}
+          >
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-3 h-8 w-16" />
+          </div>
+        ))}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
+        <div className="rounded-lg border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="grid gap-2">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            {[0, 1].map((item) => (
+              <div
+                className="rounded-md border border-zinc-200 bg-zinc-50 p-4"
+                key={item}
+              >
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="mt-3 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-5/6" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-6">
+          {[0, 1].map((item) => (
+            <div
+              className="rounded-lg border border-zinc-200 bg-white p-5"
+              key={item}
+            >
+              <Skeleton className="h-6 w-36" />
+              <div className="mt-4 grid gap-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
     </div>

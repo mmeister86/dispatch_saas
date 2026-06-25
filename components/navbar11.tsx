@@ -68,6 +68,7 @@ interface DesktopMenuItemProps {
 }
 
 interface MobileNavigationMenuProps {
+  dashboardHref?: string;
   open: boolean;
 }
 
@@ -313,10 +314,20 @@ const MOBILE_BREAKPOINT = 1024;
 
 interface Navbar11Props {
   className?: string;
+  dashboardHref?: string;
 }
 
-const Navbar11 = ({ className }: Navbar11Props) => {
+const Navbar11 = ({ className, dashboardHref }: Navbar11Props) => {
   const [open, setOpen] = useState<boolean>(false);
+  const desktopButtons = dashboardHref
+    ? [
+        {
+          label: "Dashboard",
+          isPrimary: true,
+          url: dashboardHref,
+        },
+      ]
+    : DESKTOP_BUTTONS;
 
   useEffect(() => {
     const handleResize = () => {
@@ -377,7 +388,7 @@ const Navbar11 = ({ className }: Navbar11Props) => {
               </NavigationMenu>
             </div>
             <div className="hidden items-center gap-3 xl:flex">
-              {DESKTOP_BUTTONS.map((btn, index) => (
+              {desktopButtons.map((btn, index) => (
                 <Button
                   size="sm"
                   variant={!btn.isPrimary ? "outline" : "default"}
@@ -409,7 +420,7 @@ const Navbar11 = ({ className }: Navbar11Props) => {
           </div>
         </div>
       </section>
-      <MobileNavigationMenu open={open} />
+      <MobileNavigationMenu dashboardHref={dashboardHref} open={open} />
     </Fragment>
   );
 };
@@ -472,7 +483,20 @@ const DesktopMenuItem = ({ item, index }: DesktopMenuItemProps) => {
   );
 };
 
-const MobileNavigationMenu = ({ open }: MobileNavigationMenuProps) => {
+const MobileNavigationMenu = ({
+  dashboardHref,
+  open,
+}: MobileNavigationMenuProps) => {
+  const mobileButtons = dashboardHref
+    ? [
+        {
+          label: "Dashboard",
+          isPrimary: true,
+          url: dashboardHref,
+        },
+      ]
+    : MOBILE_BUTTONS;
+
   return (
     <Sheet open={open}>
       <SheetContent
@@ -489,7 +513,7 @@ const MobileNavigationMenu = ({ open }: MobileNavigationMenuProps) => {
             </div>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-4">
-                {MOBILE_BUTTONS.map((btn, index) => (
+                {mobileButtons.map((btn, index) => (
                   <Button
                     variant={!btn.isPrimary ? "outline" : "default"}
                     className={
