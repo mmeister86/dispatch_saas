@@ -32,7 +32,7 @@ export function AppSidebar() {
     access?.state === "active" ? access.postsRemaining : null;
 
   return (
-    <Sidebar collapsible="none" className="md:h-auto">
+    <Sidebar collapsible="none">
       <SidebarHeader>
         <Link className="block" href="/dashboard">
           <p className="text-sm font-semibold text-emerald-700">Dispatch</p>

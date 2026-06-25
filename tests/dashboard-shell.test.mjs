@@ -33,7 +33,11 @@ test("/dashboard renders the canonical shadcn sidebar app shell", async () => {
   assert.match(sidebarPrimitiveSource, /export function SidebarProvider/);
   assert.match(sidebarPrimitiveSource, /export function SidebarInset/);
   assert.match(sidebarPrimitiveSource, /export function Sidebar/);
+  assert.match(sidebarPrimitiveSource, /md:sticky/);
+  assert.match(sidebarPrimitiveSource, /md:top-0/);
+  assert.match(sidebarPrimitiveSource, /md:h-screen/);
   assert.match(sidebarSource, /collapsible="none"/);
+  assert.doesNotMatch(sidebarSource, /md:h-auto/);
   assert.match(sidebarSource, /Dashboard/);
   assert.match(sidebarSource, /Analytics/);
   assert.match(sidebarSource, /Drafts/);

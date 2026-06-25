@@ -46,7 +46,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex w-full shrink-0 flex-col border-b border-zinc-200 bg-white text-zinc-950 md:min-h-screen md:w-64 md:border-b-0 md:border-r",
+        "flex w-full shrink-0 flex-col border-b border-zinc-200 bg-white text-zinc-950 md:sticky md:top-0 md:h-screen md:w-64 md:border-b-0 md:border-r",
         className,
       )}
       data-collapsible={collapsible}
