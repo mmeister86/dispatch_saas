@@ -20,6 +20,10 @@ const app = defineApp({
     X_CLIENT_ID: v.string(),
     X_CLIENT_SECRET: v.string(),
     X_OAUTH_REDIRECT_URI: v.string(),
+    X_MEDIA_UPLOAD_CONSUMER_KEY: v.optional(v.string()),
+    X_MEDIA_UPLOAD_CONSUMER_SECRET: v.optional(v.string()),
+    X_MEDIA_UPLOAD_ACCESS_TOKEN: v.optional(v.string()),
+    X_MEDIA_UPLOAD_ACCESS_TOKEN_SECRET: v.optional(v.string()),
   },
 });
 app.use(resend);

@@ -278,12 +278,16 @@ function BillingPortalPanel({ access }: { access: ActiveAccess }) {
 export function XAccountPanel() {
   const status = useQuery(api.x.connectionStatus);
   const startConnection = useAction(api.x.startConnection);
+  const disconnectX = useMutation(api.x.disconnectX);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handleConnectX() {
     setIsConnecting(true);
     setError(null);
+    setNotice(null);
 
     try {
       const connection = await startConnection({});
@@ -291,6 +295,26 @@ export function XAccountPanel() {
     } catch (err) {
       setError(errorMessage(err, "X connection failed. Try again."));
       setIsConnecting(false);
+    }
+  }
+
+  async function handleDisconnectX() {
+    setIsDisconnecting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await disconnectX({});
+
+      if (!result.disconnected) {
+        throw new Error("X is no longer connected.");
+      }
+
+      setNotice("X account disconnected. Reconnect any time to post again.");
+    } catch (err) {
+      setError(errorMessage(err, "Disconnect failed. Try again."));
+    } finally {
+      setIsDisconnecting(false);
     }
   }
 
@@ -308,28 +332,52 @@ export function XAccountPanel() {
         </div>
         <button
           className="h-10 w-fit rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={status === undefined || isConnecting}
+          disabled={status === undefined || isConnecting || isDisconnecting}
           onClick={() => void handleConnectX()}
           type="button"
         >
-          {isConnecting ? "Connecting..." : "Connect X account"}
+          {isConnecting
+            ? "Connecting..."
+            : status?.connected
+              ? "Reconnect X account"
+              : "Connect X account"}
         </button>
       </div>
 
       {status === undefined ? (
         <p className="mt-4 text-sm text-zinc-500">Checking X account...</p>
       ) : status.connected ? (
-        <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm">
-          <p className="font-medium text-emerald-800">Connected</p>
-          <p className="mt-1 text-emerald-950">
-            {status.username ? `@${status.username}` : "Ready to post to X."}
-          </p>
+        <div className="mt-4 flex flex-col gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="font-medium text-emerald-800">Connected</p>
+            <p className="mt-1 text-emerald-950">
+              {status.username ? `@${status.username}` : "Ready to post to X."}
+            </p>
+          </div>
+          <button
+            className="h-10 w-fit rounded-md border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isDisconnecting || isConnecting}
+            onClick={() => void handleDisconnectX()}
+            type="button"
+          >
+            {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+          </button>
         </div>
       ) : (
         <p className="mt-4 text-sm text-zinc-600">
           No X account connected yet.
         </p>
       )}
+
+      {notice ? (
+        <div
+          aria-live="polite"
+          className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"
+          role="status"
+        >
+          {notice}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-800">
