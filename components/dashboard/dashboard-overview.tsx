@@ -3,7 +3,6 @@
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
-import { mockAnalytics } from "@/components/dashboard/mock-analytics";
 
 type ActiveAccess = {
   email?: string;
@@ -12,6 +11,16 @@ type ActiveAccess = {
   postsThisPeriod: number;
   postLimit: number;
   postsRemaining: number;
+};
+
+type AnalyticsSummary = {
+  postCount: number;
+  totalImpressions: number;
+  totalLikes: number;
+  totalEngagements: number;
+  engagementRate: number;
+  metricsPending: boolean;
+  privateMetricsUnavailable: boolean;
 };
 
 export function DashboardOverview() {
@@ -81,6 +90,7 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
   const drafts = useQuery(api.drafts.listForReview);
   const connection = useQuery(api.github.connectedRepos);
   const xStatus = useQuery(api.x.connectionStatus);
+  const analytics = useQuery(api.analytics.summary);
   const postedDrafts = (drafts ?? []).filter(
     (draft) => draft.status === "posted",
   );
@@ -121,8 +131,8 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
             Your commit-to-post cockpit.
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600">
-            Review what shipped, keep setup healthy, and watch directional
-            analytics until Rybbit and X data are wired in.
+            Review what shipped, keep setup healthy, and watch X performance
+            for posts published through Dispatch.
           </p>
         </div>
         <Link
@@ -205,7 +215,7 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
             hasRepos={repoCount > 0}
             xConnected={xStatus?.connected ?? false}
           />
-          <MockAnalyticsCard />
+          <XPostAnalyticsCard analytics={analytics} />
         </div>
       </section>
     </div>
@@ -280,18 +290,20 @@ function StatusRow({
   );
 }
 
-function MockAnalyticsCard() {
-  const maxValue = Math.max(...mockAnalytics.series.map((point) => point.value));
-
+function XPostAnalyticsCard({
+  analytics,
+}: {
+  analytics: AnalyticsSummary | undefined;
+}) {
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-normal">
-            Mock analytics
+            X post performance
           </h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Preview data until Rybbit and X analytics are integrated.
+            Metrics for posts published through Dispatch.
           </p>
         </div>
         <Link
@@ -301,20 +313,59 @@ function MockAnalyticsCard() {
           Details
         </Link>
       </div>
-      <div className="mt-5 flex h-28 items-end gap-2">
-        {mockAnalytics.series.map((point) => (
-          <div className="flex flex-1 flex-col items-center gap-2" key={point.label}>
-            <div
-              className="w-full rounded-t bg-emerald-600"
-              style={{ height: `${Math.max(12, (point.value / maxValue) * 100)}%` }}
+      {analytics === undefined ? (
+        <p className="mt-5 text-sm text-zinc-500">Loading X metrics...</p>
+      ) : analytics.postCount === 0 ? (
+        <div className="mt-5 rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4">
+          <p className="text-sm font-semibold text-zinc-950">
+            No published posts yet.
+          </p>
+          <p className="mt-1 text-sm leading-6 text-zinc-600">
+            Post a draft to X and Dispatch will start collecting metrics.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <MiniMetric
+              label="Impressions"
+              value={formatNumber(analytics.totalImpressions)}
             />
-            <span className="text-[11px] font-medium text-zinc-500">
-              {point.label}
-            </span>
+            <MiniMetric label="Likes" value={formatNumber(analytics.totalLikes)} />
+            <MiniMetric
+              label="Engagements"
+              value={formatNumber(analytics.totalEngagements)}
+            />
+            <MiniMetric
+              label="Engagement rate"
+              value={formatPercent(analytics.engagementRate)}
+            />
           </div>
-        ))}
-      </div>
+          {analytics.metricsPending ? (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              Some X metrics are still pending their first refresh.
+            </p>
+          ) : null}
+          {analytics.privateMetricsUnavailable ? (
+            <p className="rounded-md bg-zinc-100 px-3 py-2 text-xs font-medium text-zinc-600">
+              Private X metrics are unavailable for this API access; public
+              metrics are shown.
+            </p>
+          ) : null}
+        </div>
+      )}
     </section>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-zinc-50 p-3">
+      <p className="text-xs font-medium text-zinc-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold tracking-normal text-zinc-950">
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -322,4 +373,15 @@ function formatDate(timestamp: number) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
   }).format(timestamp);
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en").format(value);
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("en", {
+    maximumFractionDigits: 1,
+    style: "percent",
+  }).format(value);
 }

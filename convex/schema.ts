@@ -82,6 +82,43 @@ export default defineSchema({
     .index("by_repoId_and_commitSha", ["repoId", "commitSha"])
     .index("by_status", ["status"]),
 
+  xPostMetricRefreshes: defineTable({
+    userId: v.id("users"),
+    draftId: v.id("drafts"),
+    xPostId: v.string(),
+    postedAt: v.number(),
+    nextRefreshAt: v.number(),
+    lastFetchedAt: v.optional(v.number()),
+    failureCount: v.number(),
+    stoppedAt: v.optional(v.number()),
+    metricsAccess: v.optional(v.union(v.literal("full"), v.literal("public_only"))),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_draftId", ["userId", "draftId"])
+    .index("by_userId_and_postedAt", ["userId", "postedAt"])
+    .index("by_draftId", ["draftId"])
+    .index("by_xPostId", ["xPostId"])
+    .index("by_nextRefreshAt", ["nextRefreshAt"]),
+
+  xPostMetricSnapshots: defineTable({
+    userId: v.id("users"),
+    draftId: v.id("drafts"),
+    xPostId: v.string(),
+    capturedAt: v.number(),
+    likeCount: v.number(),
+    replyCount: v.number(),
+    retweetCount: v.number(),
+    quoteCount: v.number(),
+    impressionCount: v.optional(v.number()),
+    urlLinkClicks: v.optional(v.number()),
+    userProfileClicks: v.optional(v.number()),
+    engagements: v.optional(v.number()),
+    metricsAccess: v.union(v.literal("full"), v.literal("public_only")),
+  })
+    .index("by_userId_and_capturedAt", ["userId", "capturedAt"])
+    .index("by_draftId_and_capturedAt", ["draftId", "capturedAt"])
+    .index("by_xPostId_and_capturedAt", ["xPostId", "capturedAt"]),
+
   voiceProfiles: defineTable({
     userId: v.id("users"),
     summary: v.string(),

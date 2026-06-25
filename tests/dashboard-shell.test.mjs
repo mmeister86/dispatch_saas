@@ -54,24 +54,22 @@ test("/dashboard renders the canonical shadcn sidebar app shell", async () => {
   assert.match(sidebarPrimitiveSource, /text-current/);
 });
 
-test("dashboard overview derives status from existing Convex data and labels mock analytics", async () => {
+test("dashboard overview derives status from existing Convex data and real X analytics", async () => {
   assert.equal(await pathExists("components/dashboard/dashboard-overview.tsx"), true);
-  assert.equal(await pathExists("components/dashboard/mock-analytics.ts"), true);
 
   const overviewSource = await read("components/dashboard/dashboard-overview.tsx");
-  const mockAnalyticsSource = await read("components/dashboard/mock-analytics.ts");
 
   assert.match(overviewSource, /api\.billing\.currentAccess/);
   assert.match(overviewSource, /api\.drafts\.listForReview/);
   assert.match(overviewSource, /api\.github\.connectedRepos/);
   assert.match(overviewSource, /api\.x\.connectionStatus/);
+  assert.match(overviewSource, /api\.analytics\.summary/);
   assert.match(overviewSource, /status === "posted"/);
   assert.match(overviewSource, /Letzte Posts/);
-  assert.match(overviewSource, /Mock analytics/);
+  assert.match(overviewSource, /X post performance/);
   assert.match(overviewSource, /\/dashboard\/settings/);
   assert.match(overviewSource, /\/dashboard\/drafts/);
-  assert.match(mockAnalyticsSource, /export const mockAnalytics/);
-  assert.doesNotMatch(mockAnalyticsSource, /api\.|fetch\(/);
+  assert.doesNotMatch(overviewSource, /mockAnalytics|MockAnalyticsCard/);
 });
 
 test("dashboard overview gates paid workflow queries behind active access", async () => {
@@ -91,9 +89,11 @@ test("dashboard overview gates paid workflow queries behind active access", asyn
   assert.doesNotMatch(outerSource, /api\.drafts\.listForReview/);
   assert.doesNotMatch(outerSource, /api\.github\.connectedRepos/);
   assert.doesNotMatch(outerSource, /api\.x\.connectionStatus/);
+  assert.doesNotMatch(outerSource, /api\.analytics\.summary/);
   assert.match(activeSource, /api\.drafts\.listForReview/);
   assert.match(activeSource, /api\.github\.connectedRepos/);
   assert.match(activeSource, /api\.x\.connectionStatus/);
+  assert.match(activeSource, /api\.analytics\.summary/);
 });
 
 test("dashboard subroutes host drafts, analytics, and settings workflows while billing redirects", async () => {

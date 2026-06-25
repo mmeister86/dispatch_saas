@@ -244,6 +244,22 @@ export const postDraft = action({
       });
     }
 
+    try {
+      await ctx.runMutation(internal.analytics.enqueuePostMetrics, {
+        draftId: args.draftId,
+        userId: refreshedContext.userId,
+        xPostId: post.xPostId,
+        postedAt,
+      });
+    } catch (err) {
+      console.warn("[x-post-analytics]", {
+        event: "enqueue_failed",
+        draftId: args.draftId,
+        xPostId: post.xPostId,
+        errorName: err instanceof Error ? err.name : "UnknownError",
+      });
+    }
+
     return post;
   },
 });
@@ -561,6 +577,35 @@ export const getRefreshToken = internalQuery({
     }
 
     return user.xRefreshToken;
+  },
+});
+
+export const getAnalyticsAccessToken = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.union(
+    v.object({
+      connected: v.literal(false),
+    }),
+    v.object({
+      connected: v.literal(true),
+      accessToken: v.string(),
+      tokenExpiresAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+
+    if (user === null || !user.xAccessToken || !user.xTokenExpiresAt) {
+      return { connected: false as const };
+    }
+
+    return {
+      connected: true as const,
+      accessToken: user.xAccessToken,
+      tokenExpiresAt: user.xTokenExpiresAt,
+    };
   },
 });
 

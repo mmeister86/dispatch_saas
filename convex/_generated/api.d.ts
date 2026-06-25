@@ -9,7 +9,9 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as analytics from "../analytics.js";
 import type * as billing from "../billing.js";
+import type * as crons from "../crons.js";
 import type * as drafts from "../drafts.js";
 import type * as email from "../email.js";
 import type * as generation from "../generation.js";
@@ -31,7 +33,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  analytics: typeof analytics;
   billing: typeof billing;
+  crons: typeof crons;
   drafts: typeof drafts;
   email: typeof email;
   generation: typeof generation;

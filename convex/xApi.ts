@@ -1,6 +1,10 @@
 const X_CREATE_POST_URL = "https://api.x.com/2/tweets";
+const X_POST_LOOKUP_URL = "https://api.x.com/2/tweets";
 const X_MEDIA_UPLOAD_URL = "https://api.x.com/2/media/upload";
 const X_LEGACY_MEDIA_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json";
+const FULL_POST_METRIC_FIELDS =
+  "public_metrics,non_public_metrics,organic_metrics";
+const PUBLIC_POST_METRIC_FIELDS = "public_metrics";
 
 type CreateXPostBody = {
   text: string;
@@ -29,6 +33,27 @@ type XLegacyMediaUploadResponse = {
   media_id?: unknown;
   media_id_string?: unknown;
   errors?: unknown[];
+};
+
+type XPostLookupResponse = {
+  data?: {
+    public_metrics?: unknown;
+    non_public_metrics?: unknown;
+    organic_metrics?: unknown;
+  };
+  errors?: unknown[];
+};
+
+export type XPostMetrics = {
+  metricsAccess: "full" | "public_only";
+  likeCount: number;
+  replyCount: number;
+  retweetCount: number;
+  quoteCount: number;
+  impressionCount?: number;
+  urlLinkClicks?: number;
+  userProfileClicks?: number;
+  engagements?: number;
 };
 
 type MediaUploadLogContext = {
@@ -89,6 +114,78 @@ export async function createXPost({
   }
 
   return { xPostId };
+}
+
+export async function fetchXPostMetrics({
+  accessToken,
+  xPostId,
+}: {
+  accessToken: string;
+  xPostId: string;
+}): Promise<XPostMetrics> {
+  try {
+    return await fetchXPostMetricsWithFields({
+      accessToken,
+      xPostId,
+      fields: FULL_POST_METRIC_FIELDS,
+      metricsAccess: "full",
+    });
+  } catch (err) {
+    if (!isXPostMetricFallbackError(err)) {
+      throw err;
+    }
+
+    return await fetchXPostMetricsWithFields({
+      accessToken,
+      xPostId,
+      fields: PUBLIC_POST_METRIC_FIELDS,
+      metricsAccess: "public_only",
+    });
+  }
+}
+
+async function fetchXPostMetricsWithFields({
+  accessToken,
+  xPostId,
+  fields,
+  metricsAccess,
+}: {
+  accessToken: string;
+  xPostId: string;
+  fields: string;
+  metricsAccess: "full" | "public_only";
+}) {
+  const url = new URL(`${X_POST_LOOKUP_URL}/${encodeURIComponent(xPostId)}`);
+  url.searchParams.set("tweet.fields", fields);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (metricsAccess === "full" && canFallBackToPublicMetrics(response.status)) {
+      throw new XPostMetricFallbackError(response.status);
+    }
+
+    throw new Error(safeXPostMetricErrorMessage(response.status));
+  }
+
+  const payload = (await response
+    .json()
+    .catch(() => ({}))) as XPostLookupResponse;
+
+  if (payload.errors && payload.errors.length > 0) {
+    if (metricsAccess === "full") {
+      throw new XPostMetricFallbackError(response.status);
+    }
+
+    throw new Error("X metrics request returned errors.");
+  }
+
+  return metricsFromPostLookup(payload, metricsAccess);
 }
 
 export async function uploadTweetImage({
@@ -576,6 +673,69 @@ function isXMediaUploadHttpError(error: unknown) {
   return error instanceof XMediaUploadHttpError;
 }
 
+class XPostMetricFallbackError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super("X private post metrics unavailable.");
+    this.name = "XPostMetricFallbackError";
+    this.status = status;
+  }
+}
+
+function isXPostMetricFallbackError(error: unknown) {
+  return error instanceof XPostMetricFallbackError;
+}
+
+function canFallBackToPublicMetrics(status: number) {
+  return status === 400 || status === 401 || status === 403;
+}
+
+function metricsFromPostLookup(
+  payload: XPostLookupResponse,
+  metricsAccess: "full" | "public_only",
+): XPostMetrics {
+  const publicMetrics = objectRecord(payload.data?.public_metrics);
+  const organicMetrics = objectRecord(payload.data?.organic_metrics);
+  const nonPublicMetrics = objectRecord(payload.data?.non_public_metrics);
+
+  if (publicMetrics === null) {
+    throw new Error("X did not return public post metrics.");
+  }
+
+  const likeCount = metricNumber(publicMetrics.like_count) ?? 0;
+  const replyCount = metricNumber(publicMetrics.reply_count) ?? 0;
+  const retweetCount = metricNumber(publicMetrics.retweet_count) ?? 0;
+  const quoteCount = metricNumber(publicMetrics.quote_count) ?? 0;
+  const impressionCount =
+    metricNumber(nonPublicMetrics?.impression_count) ??
+    metricNumber(organicMetrics?.impression_count) ??
+    metricNumber(publicMetrics.impression_count);
+  const urlLinkClicks =
+    metricNumber(nonPublicMetrics?.url_link_clicks) ??
+    metricNumber(organicMetrics?.url_link_clicks);
+  const userProfileClicks =
+    metricNumber(nonPublicMetrics?.user_profile_clicks) ??
+    metricNumber(organicMetrics?.user_profile_clicks);
+  const engagements = metricNumber(nonPublicMetrics?.engagements);
+
+  return compactLogFields({
+    metricsAccess,
+    likeCount,
+    replyCount,
+    retweetCount,
+    quoteCount,
+    impressionCount,
+    urlLinkClicks,
+    userProfileClicks,
+    engagements,
+  }) as XPostMetrics;
+}
+
+function metricNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function safeXPostErrorMessage(status: number) {
   switch (status) {
     case 401:
@@ -589,6 +749,24 @@ function safeXPostErrorMessage(status: number) {
       }
 
       return "X post failed. Try again.";
+  }
+}
+
+function safeXPostMetricErrorMessage(status: number) {
+  switch (status) {
+    case 401:
+    case 403:
+      return "X connection expired. Reconnect X before refreshing analytics.";
+    case 404:
+      return "X post metrics are unavailable for this post.";
+    case 429:
+      return "X is rate limiting analytics refreshes right now.";
+    default:
+      if (status >= 500) {
+        return "X analytics are temporarily unavailable.";
+      }
+
+      return "X analytics refresh failed.";
   }
 }
 
