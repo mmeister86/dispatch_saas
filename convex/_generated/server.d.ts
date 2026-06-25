@@ -39,6 +39,10 @@ type Env = {
   readonly OPENAI_API_KEY: string;
   readonly X_CLIENT_ID: string;
   readonly X_CLIENT_SECRET: string;
+  readonly X_MEDIA_UPLOAD_ACCESS_TOKEN: string | undefined;
+  readonly X_MEDIA_UPLOAD_ACCESS_TOKEN_SECRET: string | undefined;
+  readonly X_MEDIA_UPLOAD_CONSUMER_KEY: string | undefined;
+  readonly X_MEDIA_UPLOAD_CONSUMER_SECRET: string | undefined;
   readonly X_OAUTH_REDIRECT_URI: string;
 };
 

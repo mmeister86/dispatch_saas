@@ -8,6 +8,7 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
   query,
 } from "./_generated/server";
 import {
@@ -20,7 +21,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 const X_AUTHORIZE_URL = "https://x.com/i/oauth2/authorize";
 const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_ME_URL = "https://api.x.com/2/users/me";
-const X_SCOPES = "tweet.read tweet.write users.read offline.access";
+const X_SCOPES = "tweet.read tweet.write media.write users.read offline.access";
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 export const connectionStatus = query({
@@ -31,6 +32,7 @@ export const connectionStatus = query({
     }),
     v.object({
       connected: v.literal(true),
+      connectedAt: v.optional(v.number()),
       username: v.optional(v.string()),
     }),
   ),
@@ -43,6 +45,7 @@ export const connectionStatus = query({
 
     return {
       connected: true as const,
+      ...(user.xConnectedAt ? { connectedAt: user.xConnectedAt } : {}),
       ...(user.xUsername ? { username: user.xUsername } : {}),
     };
   },
@@ -86,6 +89,40 @@ export const startConnection = action({
     });
 
     return { url: `${X_AUTHORIZE_URL}?${params.toString()}` };
+  },
+});
+
+export const disconnectX = mutation({
+  args: {},
+  returns: v.object({ disconnected: v.boolean() }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      throw new Error("Sign in before disconnecting X.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkTokenIdentifier", (q) =>
+        q.eq("clerkTokenIdentifier", identity.tokenIdentifier),
+      )
+      .unique();
+
+    if (user === null || !user.xUserId) {
+      return { disconnected: false };
+    }
+
+    await ctx.db.patch(user._id, {
+      xUserId: undefined,
+      xAccessToken: undefined,
+      xRefreshToken: undefined,
+      xConnectedAt: undefined,
+      xTokenExpiresAt: undefined,
+      xUsername: undefined,
+    });
+
+    return { disconnected: true };
   },
 });
 
@@ -366,6 +403,7 @@ export const getDraftForMediaUpload = internalQuery({
   },
   returns: v.object({
     userId: v.id("users"),
+    xUserId: v.string(),
     accessToken: v.string(),
     tokenExpiresAt: v.number(),
     mediaId: v.optional(v.string()),
@@ -389,12 +427,18 @@ export const getDraftForMediaUpload = internalQuery({
       throw new Error("This draft is already being posted.");
     }
 
-    if (!user.xAccessToken || !user.xRefreshToken || !user.xTokenExpiresAt) {
+    if (
+      !user.xUserId ||
+      !user.xAccessToken ||
+      !user.xRefreshToken ||
+      !user.xTokenExpiresAt
+    ) {
       throw new Error("Connect X before uploading media.");
     }
 
     return {
       userId: user._id,
+      xUserId: user.xUserId,
       accessToken: user.xAccessToken,
       tokenExpiresAt: user.xTokenExpiresAt,
       ...(draft.mediaId ? { mediaId: draft.mediaId } : {}),
@@ -736,6 +780,7 @@ type DraftPostingContext =
 
 type DraftMediaUploadContext = {
   userId: Id<"users">;
+  xUserId: string;
   accessToken: string;
   tokenExpiresAt: number;
   mediaId?: string;

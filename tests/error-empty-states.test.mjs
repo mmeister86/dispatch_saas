@@ -97,6 +97,7 @@ test("X API failures use safe user-facing messages without response bodies", asy
   assert.match(source, /case 403:/);
   assert.match(source, /return "X connection expired\. Reconnect X before posting\."/);
   assert.match(source, /return "X connection expired\. Reconnect X before uploading media\."/);
+  assert.match(source, /return "X image upload is unavailable for this X API configuration\. Post text-only or configure legacy X media upload credentials\."/);
   assert.match(source, /case 429:/);
   assert.match(source, /return "X is rate limiting posts right now\. Try again in a minute\."/);
   assert.match(source, /return "X is rate limiting media uploads right now\. Try again in a minute\."/);

@@ -5,6 +5,7 @@ import { rateLimiter } from "./rateLimits";
 import { uploadTweetImage } from "./xApi";
 import { env, httpAction, internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { LegacyMediaUploadCredentials } from "./xApi";
 
 const http = httpRouter();
 const MAX_CONNECTED_REPOS_PER_PUSH = 100;
@@ -210,6 +211,9 @@ http.route({
         file,
         mediaType: file.type,
         mediaCategory: "tweet_image",
+        legacyCredentials: legacyMediaUploadCredentials(
+          refreshedContext.xUserId,
+        ),
       });
 
       await ctx.runMutation(internal.x.storeDraftMedia, {
@@ -224,6 +228,27 @@ http.route({
     }
   }),
 });
+
+function legacyMediaUploadCredentials(
+  ownerUserId: string,
+): LegacyMediaUploadCredentials | undefined {
+  const consumerKey = env.X_MEDIA_UPLOAD_CONSUMER_KEY;
+  const consumerSecret = env.X_MEDIA_UPLOAD_CONSUMER_SECRET;
+  const accessToken = env.X_MEDIA_UPLOAD_ACCESS_TOKEN;
+  const accessTokenSecret = env.X_MEDIA_UPLOAD_ACCESS_TOKEN_SECRET;
+
+  if (!consumerKey || !consumerSecret || !accessToken || !accessTokenSecret) {
+    return undefined;
+  }
+
+  return {
+    consumerKey,
+    consumerSecret,
+    accessToken,
+    accessTokenSecret,
+    ownerUserId,
+  };
+}
 
 http.route({
   path: "/lemon-squeezy/webhook",

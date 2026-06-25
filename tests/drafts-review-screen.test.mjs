@@ -19,6 +19,7 @@ test("draft review canvas makes variant selection, editing, and post readiness e
 
   assert.match(source, /api\.drafts\.listForReview/);
   assert.match(source, /api\.x\.postDraft/);
+  assert.match(source, /api\.x\.connectionStatus/);
   assert.match(source, /postDraft\(\{\s*draftId:\s*draft\._id,\s*text\s*\}\)/s);
   assert.match(editorSource, /const trimmedText = selectedText\.trim\(\)/);
   assert.match(editorSource, /trimmedText\.length <= 280/);
@@ -45,10 +46,45 @@ test("draft review keeps image upload optional and exposes accessible status fee
   assert.match(source, /\/x\/media\/upload/);
   assert.match(source, /formData\.append\("draftId"/);
   assert.match(source, /formData\.append\("file"/);
+  assert.match(source, /mediaUploadStateByDraftId/);
+  assert.match(source, /mediaUploadRecoveryByDraftId/);
+  assert.match(source, /previousXConnectedAt/);
+  assert.match(source, /clearReconnectUploadFailures/);
+  assert.match(source, /fileInputResetKeyByDraftId/);
+  assert.match(source, /setFileInputResetKeyByDraftId/);
+  assert.match(source, /type MediaUploadState = "idle" \| "uploading" \| "attached" \| "failed"/);
+  assert.match(source, /type MediaUploadRecovery = "retry" \| "reconnect" \| "unavailable"/);
+  assert.match(source, /isReconnectUploadFailure/);
+  assert.match(source, /\[draft\._id\]: "attached"/);
+  assert.match(source, /\[draft\._id\]: "failed"/);
+  assert.match(source, /const uploadRecovery = isReconnectUploadFailure\(message\)/);
+  assert.match(source, /\[draft\._id\]: uploadRecovery/);
+  assert.match(source, /isUnavailableUploadFailure\(message\)/);
+  assert.match(source, /\[draft\._id\]: "retry"/);
+  assert.match(source, /uploadRecovery !== "reconnect"/);
+  assert.match(source, /delete next\[draftId\]/);
   assert.match(editorSource, /accept="image\/png,image\/jpeg,image\/webp"/);
-  assert.match(editorSource, /Text-only is ready\./);
+  assert.match(editorSource, /key=\{fileInputResetKey\}/);
+  assert.match(editorSource, /No image attached\./);
+  assert.match(editorSource, /Image was not attached\./);
   assert.match(editorSource, /Image attached\./);
+  assert.match(
+    editorSource,
+    /Text-only post is ready\. Reconnect X and upload again to include an image\./,
+  );
+  assert.match(
+    editorSource,
+    /Text-only post is ready\. Choose the image again to include it\./,
+  );
+  assert.match(
+    editorSource,
+    /Text-only post is ready\. Image upload is unavailable for this X API configuration\./,
+  );
+  assert.match(editorSource, /Post without an image for now\./);
+  assert.match(editorSource, /uploadRecovery === "reconnect"/);
+  assert.match(editorSource, /uploadRecovery === "unavailable"/);
   assert.doesNotMatch(editorSource, /Attached media \$\{draft\.mediaId\}/);
+  assert.doesNotMatch(editorSource, /Text-only is ready\./);
   assert.match(editorSource, /aria-live="polite"/);
   assert.match(editorSource, /role="status"/);
   assert.match(editorSource, /role="alert"/);

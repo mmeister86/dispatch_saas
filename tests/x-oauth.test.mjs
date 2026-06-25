@@ -26,6 +26,15 @@ test("Convex app declares X OAuth environment variables", async () => {
   ]) {
     assert.match(source, new RegExp(`${name}:\\s*v\\.string\\(\\)`));
   }
+
+  for (const name of [
+    "X_MEDIA_UPLOAD_CONSUMER_KEY",
+    "X_MEDIA_UPLOAD_CONSUMER_SECRET",
+    "X_MEDIA_UPLOAD_ACCESS_TOKEN",
+    "X_MEDIA_UPLOAD_ACCESS_TOKEN_SECRET",
+  ]) {
+    assert.match(source, new RegExp(`${name}:\\s*v\\.optional\\(v\\.string\\(\\)\\)`));
+  }
 });
 
 test("schema stores X tokens server-side and short-lived OAuth state", async () => {
@@ -64,6 +73,8 @@ test("X OAuth module derives identity server-side and exposes safe public functi
   assert.match(connectionStatusSource, /connected:\s*v\.literal\(false\)/);
   assert.match(connectionStatusSource, /connected:\s*v\.literal\(true\)/);
   assert.match(connectionStatusSource, /username:\s*v\.optional\(v\.string\(\)\)/);
+  assert.match(connectionStatusSource, /connectedAt:\s*v\.optional\(v\.number\(\)\)/);
+  assert.match(connectionStatusSource, /xConnectedAt/);
 });
 
 test("X OAuth start action builds an authorization URL with PKCE and launch scopes", async () => {
@@ -82,8 +93,10 @@ test("X OAuth start action builds an authorization URL with PKCE and launch scop
   assert.match(startConnectionSource, /code_challenge/);
   assert.match(startConnectionSource, /code_challenge_method/);
   assert.match(startConnectionSource, /S256/);
-  assert.match(source, /tweet\.read tweet\.write users\.read offline\.access/);
-  assert.doesNotMatch(source, /media\.write/);
+  assert.match(
+    source,
+    /tweet\.read tweet\.write media\.write users\.read offline\.access/,
+  );
   assert.match(source, /crypto\.getRandomValues/);
   assert.match(source, /crypto\.subtle\.digest\(\s*"SHA-256"/);
 });
@@ -162,4 +175,37 @@ test("subscriber workspace exposes the X account connection flow", async () => {
   assert.match(source, /X account/);
   assert.match(source, /window\.location\.assign\(connection\.url\)/);
   assert.doesNotMatch(source, /xAccessToken|xRefreshToken/);
+});
+
+test("X OAuth module exposes a disconnect mutation that clears stored tokens", async () => {
+  const source = await read("convex/x.ts");
+  const disconnectSource = source.slice(
+    source.indexOf("export const disconnectX"),
+    source.indexOf("export const postDraft"),
+  );
+
+  assert.match(source, /export const disconnectX = mutation\(\{/);
+  assert.match(disconnectSource, /ctx\.auth\.getUserIdentity\(\)/);
+  assert.match(disconnectSource, /by_clerkTokenIdentifier/);
+  assert.match(disconnectSource, /xUserId:\s*undefined/);
+  assert.match(disconnectSource, /xAccessToken:\s*undefined/);
+  assert.match(disconnectSource, /xRefreshToken:\s*undefined/);
+  assert.match(disconnectSource, /xTokenExpiresAt:\s*undefined/);
+  assert.match(disconnectSource, /xConnectedAt:\s*undefined/);
+  assert.match(disconnectSource, /xUsername:\s*undefined/);
+  assert.match(disconnectSource, /disconnected:\s*v\.boolean\(\)/);
+});
+
+test("subscriber workspace can disconnect a connected X account", async () => {
+  const source = await read("components/settings-workspace.tsx");
+  const panelSource = source.slice(
+    source.indexOf("export function XAccountPanel"),
+    source.indexOf("function GitHubRepoPanel"),
+  );
+
+  assert.match(source, /api\.x\.disconnectX/);
+  assert.match(panelSource, /useMutation\(api\.x\.disconnectX\)/);
+  assert.match(panelSource, /isDisconnecting/);
+  assert.match(panelSource, /Disconnecting\.\.\./);
+  assert.match(panelSource, /Disconnect/);
 });

@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useAction, useQuery } from "convex/react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -34,6 +34,9 @@ type ActiveAccess = {
   postLimit: number;
   postsRemaining: number;
 };
+
+type MediaUploadState = "idle" | "uploading" | "attached" | "failed";
+type MediaUploadRecovery = "retry" | "reconnect" | "unavailable";
 
 export function DraftsWorkspace({ embedded = false }: { embedded?: boolean } = {}) {
   const access = useQuery(api.billing.currentAccess);
@@ -94,12 +97,21 @@ function ActiveDraftsWorkspace({
 }) {
   const connectedRepos = useQuery(api.github.connectedRepos);
   const drafts = useQuery(api.drafts.listForReview);
+  const xConnectionStatus = useQuery(api.x.connectionStatus);
   const postDraft = useAction(api.x.postDraft);
   const { getToken } = useAuth();
+  const previousXConnectedAt = useRef<number | null>(null);
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
   const [draftText, setDraftText] = useState<Record<string, string>>({});
   const [postingDraftId, setPostingDraftId] = useState<string | null>(null);
-  const [uploadingDraftId, setUploadingDraftId] = useState<string | null>(null);
+  const [mediaUploadStateByDraftId, setMediaUploadStateByDraftId] = useState<
+    Record<string, MediaUploadState>
+  >({});
+  const [mediaUploadRecoveryByDraftId, setMediaUploadRecoveryByDraftId] =
+    useState<Record<string, MediaUploadRecovery>>({});
+  const [fileInputResetKeyByDraftId, setFileInputResetKeyByDraftId] = useState<
+    Record<string, number>
+  >({});
   const [noticeByDraftId, setNoticeByDraftId] = useState<Record<string, string>>(
     {},
   );
@@ -138,6 +150,56 @@ function ActiveDraftsWorkspace({
   const firstDraftId = drafts?.[0]?._id ?? null;
   const hasConnectedRepos = (repos ?? []).length > 0;
   const hasDrafts = (drafts ?? []).length > 0;
+  const xConnectedAt =
+    xConnectionStatus?.connected === true
+      ? xConnectionStatus.connectedAt
+      : undefined;
+
+  const clearReconnectUploadFailures = useCallback(() => {
+    const reconnectDraftIds: string[] = [];
+
+    for (const [draftId, uploadRecovery] of Object.entries(
+      mediaUploadRecoveryByDraftId,
+    )) {
+      if (uploadRecovery !== "reconnect") {
+        continue;
+      }
+
+      reconnectDraftIds.push(draftId);
+    }
+
+    if (reconnectDraftIds.length === 0) {
+      return;
+    }
+
+    setMediaUploadStateByDraftId((current) => {
+      const next = { ...current };
+
+      for (const draftId of reconnectDraftIds) {
+        delete next[draftId];
+      }
+
+      return next;
+    });
+    setMediaUploadRecoveryByDraftId((current) => {
+      const next = { ...current };
+
+      for (const draftId of reconnectDraftIds) {
+        delete next[draftId];
+      }
+
+      return next;
+    });
+    setErrorByDraftId((current) => {
+      const next = { ...current };
+
+      for (const draftId of reconnectDraftIds) {
+        delete next[draftId];
+      }
+
+      return next;
+    });
+  }, [mediaUploadRecoveryByDraftId]);
 
   useEffect(() => {
     if (selectedDraftId !== null || firstDraftId === null) {
@@ -146,6 +208,21 @@ function ActiveDraftsWorkspace({
 
     setSelectedDraftId(firstDraftId);
   }, [firstDraftId, selectedDraftId]);
+
+  useEffect(() => {
+    if (xConnectedAt === undefined) {
+      return;
+    }
+
+    const previous = previousXConnectedAt.current;
+    previousXConnectedAt.current = xConnectedAt;
+
+    if (previous === null || previous === xConnectedAt) {
+      return;
+    }
+
+    clearReconnectUploadFailures();
+  }, [clearReconnectUploadFailures, xConnectedAt]);
 
   async function handlePost(draft: DraftReviewItem) {
     const text = selectedTextForDraft(draft).trim();
@@ -184,6 +261,18 @@ function ActiveDraftsWorkspace({
     const siteUrl = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
 
     if (!siteUrl) {
+      setMediaUploadStateByDraftId((current) => ({
+        ...current,
+        [draft._id]: "failed",
+      }));
+      setMediaUploadRecoveryByDraftId((current) => ({
+        ...current,
+        [draft._id]: "retry",
+      }));
+      setFileInputResetKeyByDraftId((current) => ({
+        ...current,
+        [draft._id]: (current[draft._id] ?? 0) + 1,
+      }));
       setErrorByDraftId((current) => ({
         ...current,
         [draft._id]: "Missing Convex site URL for uploads.",
@@ -191,7 +280,15 @@ function ActiveDraftsWorkspace({
       return;
     }
 
-    setUploadingDraftId(draft._id);
+    setMediaUploadStateByDraftId((current) => ({
+      ...current,
+      [draft._id]: "uploading",
+    }));
+    setMediaUploadRecoveryByDraftId((current) => {
+      const next = { ...current };
+      delete next[draft._id];
+      return next;
+    });
     setErrorByDraftId((current) => ({ ...current, [draft._id]: "" }));
     setNoticeByDraftId((current) => ({ ...current, [draft._id]: "" }));
 
@@ -222,19 +319,49 @@ function ActiveDraftsWorkspace({
         throw new Error(payload.error ?? "Image upload failed.");
       }
 
+      setMediaUploadStateByDraftId((current) => ({
+        ...current,
+        [draft._id]: "attached",
+      }));
+      setMediaUploadRecoveryByDraftId((current) => {
+        const next = { ...current };
+        delete next[draft._id];
+        return next;
+      });
       setNoticeByDraftId((current) => ({
         ...current,
         [draft._id]: "Image attached.",
       }));
     } catch (err) {
+      const message = errorMessage(err, "Image upload failed. Try again.");
+      const uploadRecovery = isReconnectUploadFailure(message)
+        ? "reconnect"
+        : isUnavailableUploadFailure(message)
+          ? "unavailable"
+          : "retry";
+
+      setMediaUploadStateByDraftId((current) => ({
+        ...current,
+        [draft._id]: "failed",
+      }));
+      setMediaUploadRecoveryByDraftId((current) => ({
+        ...current,
+        [draft._id]: uploadRecovery,
+      }));
+      setFileInputResetKeyByDraftId((current) => ({
+        ...current,
+        [draft._id]: (current[draft._id] ?? 0) + 1,
+      }));
       setErrorByDraftId((current) => ({
         ...current,
-        [draft._id]: userFacingActionError(
-          errorMessage(err, "Image upload failed. Try again."),
-        ),
+        [draft._id]: userFacingActionError(message),
       }));
     } finally {
-      setUploadingDraftId(null);
+      setMediaUploadStateByDraftId((current) =>
+        current[draft._id] === "uploading"
+          ? { ...current, [draft._id]: "idle" }
+          : current,
+      );
     }
   }
 
@@ -322,9 +449,11 @@ function ActiveDraftsWorkspace({
               cappedMessage={cappedMessage}
               draft={selectedDraft}
               error={errorByDraftId[selectedDraft._id] ?? ""}
+              fileInputResetKey={
+                fileInputResetKeyByDraftId[selectedDraft._id] ?? 0
+              }
               isCapped={isCapped}
               isPosting={postingDraftId === selectedDraft._id}
-              isUploading={uploadingDraftId === selectedDraft._id}
               notice={noticeByDraftId[selectedDraft._id] ?? ""}
               onPost={() => void handlePost(selectedDraft)}
               onSelectVariant={(variant) =>
@@ -341,6 +470,10 @@ function ActiveDraftsWorkspace({
               }
               onUpload={(file) => void handleUpload(selectedDraft, file)}
               selectedText={selectedTextForDraft(selectedDraft)}
+              uploadRecovery={mediaUploadRecoveryByDraftId[selectedDraft._id]}
+              uploadState={
+                mediaUploadStateByDraftId[selectedDraft._id] ?? "idle"
+              }
             />
           ) : (
             <DraftsEmptyState
@@ -485,30 +618,37 @@ function DraftEditorCanvas({
   cappedMessage,
   draft,
   error,
+  fileInputResetKey,
   isCapped,
   isPosting,
-  isUploading,
   notice,
   onPost,
   onSelectVariant,
   onTextChange,
   onUpload,
   selectedText,
+  uploadRecovery,
+  uploadState,
 }: {
   cappedMessage: string;
   draft: DraftReviewItem;
   error: string;
+  fileInputResetKey: number;
   isCapped: boolean;
   isPosting: boolean;
-  isUploading: boolean;
   notice: string;
   onPost: () => void;
   onSelectVariant: (variant: string) => void;
   onTextChange: (text: string) => void;
   onUpload: (file: File | null) => void;
   selectedText: string;
+  uploadRecovery?: MediaUploadRecovery;
+  uploadState: MediaUploadState;
 }) {
   const trimmedText = selectedText.trim();
+  const isUploading = uploadState === "uploading";
+  const hasAttachedImage =
+    draft.mediaId !== undefined || uploadState === "attached";
   const canPost =
     draft.status === "draft" &&
     trimmedText.length > 0 &&
@@ -530,9 +670,24 @@ function DraftEditorCanvas({
     postReadinessMessage = cappedMessage;
   } else if (isUploading) {
     postReadinessMessage = "Image upload needs to finish before posting.";
+  } else if (uploadState === "failed" && uploadRecovery === "reconnect") {
+    postReadinessMessage =
+      "Text-only post is ready. Reconnect X and upload again to include an image.";
+  } else if (uploadState === "failed" && uploadRecovery === "unavailable") {
+    postReadinessMessage =
+      "Text-only post is ready. Image upload is unavailable for this X API configuration.";
+  } else if (uploadState === "failed") {
+    postReadinessMessage =
+      "Text-only post is ready. Choose the image again to include it.";
   } else if (isPosting) {
     postReadinessMessage = "Publishing to X...";
   }
+
+  const imageStatusMessage = hasAttachedImage
+    ? "Image attached."
+    : uploadState === "failed"
+      ? "Image was not attached."
+      : "No image attached.";
 
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-5 sm:p-6">
@@ -630,13 +785,36 @@ function DraftEditorCanvas({
             accept="image/png,image/jpeg,image/webp"
             className="mt-3 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
             disabled={draft.status !== "draft" || isUploading}
-            onChange={(event) => onUpload(event.currentTarget.files?.[0] ?? null)}
+            key={fileInputResetKey}
+            onChange={(event) =>
+              onUpload(event.currentTarget.files?.[0] ?? null)
+            }
             type="file"
           />
         </label>
         <p className="text-xs text-zinc-500">
-          {draft.mediaId ? "Image attached." : "Text-only is ready."}
+          {imageStatusMessage}
         </p>
+        {uploadState === "failed" && uploadRecovery === "reconnect" ? (
+          <p className="text-xs leading-5 text-zinc-600">
+            Reconnect X in{" "}
+            <Link
+              className="font-semibold text-zinc-950 underline"
+              href="/dashboard/settings"
+            >
+              settings
+            </Link>{" "}
+            and choose the image again to include it.
+          </p>
+        ) : uploadState === "failed" && uploadRecovery === "unavailable" ? (
+          <p className="text-xs leading-5 text-zinc-600">
+            Post without an image for now.
+          </p>
+        ) : uploadState === "failed" ? (
+          <p className="text-xs leading-5 text-zinc-600">
+            Choose the image again after resolving the upload error.
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -705,10 +883,24 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isReconnectUploadFailure(message: string) {
+  return (
+    message.includes("Reconnect X before uploading media") ||
+    message.includes("Connect X before uploading media")
+  );
+}
+
+function isUnavailableUploadFailure(message: string) {
+  return message.includes(
+    "X image upload is unavailable for this X API configuration",
+  );
+}
+
 function userFacingActionError(message: string) {
   if (
     message.includes("Reconnect X before posting") ||
     message.includes("Connect X before posting") ||
+    message.includes("Reconnect X before uploading media") ||
     message.includes("Connect X before uploading media")
   ) {
     return `${message} Open the X account panel from the workspace, reconnect, then try posting again.`;
