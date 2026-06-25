@@ -88,13 +88,46 @@ test("hero block uses the approved Dispatch headline, subhead, and single CTA", 
   assert.doesNotMatch(source, /Lorem ipsum/);
 });
 
-test("landing skeleton does not inject later Task-7 website copy yet", async () => {
-  const source = await read("app/page.tsx");
+test("feature block uses the approved empathy and how-it-works copy", async () => {
+  const source = await read("components/feature276.tsx");
+  const expectedSteps = [
+    "Connect GitHub",
+    "Push a commit",
+    "Pick the draft worth posting",
+  ];
 
-  assert.doesNotMatch(source, /You keep shipping, but your audience/);
-  assert.doesNotMatch(source, /Simple pricing for builders/);
-  assert.doesNotMatch(source, /Dispatch is not just another ChatGPT wrapper/);
-  assert.doesNotMatch(source, /Questions before your first draft/);
+  assert.match(
+    source,
+    /You keep shipping, but your audience never sees the progress\./,
+  );
+  assert.match(
+    source,
+    /Every meaningful commit can build trust\. Most of them stay buried in GitHub\./,
+  );
+  assert.match(source, /How it works/);
+
+  for (const step of expectedSteps) {
+    const matches = source.match(new RegExp(step, "g")) ?? [];
+    assert.equal(matches.length, 1, `${step} should appear exactly once`);
+  }
+
+  assert.doesNotMatch(source, /Build faster with production ready features/);
+  assert.doesNotMatch(source, /Every component is built with React/);
+  assert.doesNotMatch(source, /Full Source Code/);
+  assert.doesNotMatch(source, /Responsive Design/);
+});
+
+test("landing skeleton keeps Task-25 demo and later website copy out of scope", async () => {
+  const pageSource = await read("app/page.tsx");
+  const featureSource = await read("components/feature276.tsx");
+  const combinedSource = `${pageSource}\n${featureSource}`;
+
+  assert.doesNotMatch(combinedSource, /sample commits/i);
+  assert.doesNotMatch(combinedSource, /canned/i);
+  assert.doesNotMatch(combinedSource, /visitor clicks/i);
+  assert.doesNotMatch(combinedSource, /Simple pricing for builders/);
+  assert.doesNotMatch(combinedSource, /Dispatch is not just another ChatGPT wrapper/);
+  assert.doesNotMatch(combinedSource, /Questions before your first draft/);
 });
 
 test("global container rule centers installed shadcnblocks", async () => {
