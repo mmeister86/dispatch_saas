@@ -9,7 +9,13 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const NAVIGATION = [
+  { label: "Home", href: "/" },
+  { label: "Problem", href: "#problem" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "Pricing", href: "#pricing" },
+  { label: "Comparison", href: "#comparison" },
+  { label: "Proof", href: "#proof" },
+  { label: "FAQ", href: "#faq" },
 ];
 
 const PRICING_SIGNAL = ["Good €9/mo", "Better €19/mo"];

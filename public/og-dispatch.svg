@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Dispatch social preview</title>
+  <desc id="desc">Dispatch turns GitHub commits into build-in-public posts.</desc>
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <rect x="48" y="48" width="1104" height="534" rx="28" fill="#050505"/>
+  <circle cx="106" cy="108" r="14" fill="#10b981"/>
+  <text x="132" y="119" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Dispatch</text>
+  <text x="96" y="282" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="800">Turn commits into</text>
+  <text x="96" y="366" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="74" font-weight="800">posts worth sharing.</text>
+  <text x="96" y="452" fill="#d4d4d8" font-family="Arial, Helvetica, sans-serif" font-size="34">Built in public by @matthias_builds</text>
+  <rect x="96" y="500" width="332" height="54" rx="27" fill="#10b981"/>
+  <text x="124" y="537" fill="#04130d" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700">GitHub commit -> X draft</text>
+</svg>

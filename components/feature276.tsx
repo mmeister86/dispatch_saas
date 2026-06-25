@@ -66,7 +66,10 @@ const Feature276 = (props: Props) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   return (
-    <section className={cn("overflow-hidden py-28 md:py-32", className)}>
+    <section
+      id="problem"
+      className={cn("overflow-hidden py-28 md:py-32", className)}
+    >
       <div className="container">
         <div className="flex flex-col items-center justify-center">
           <p className="rounded-full bg-muted px-4 py-1 text-xs uppercase">
@@ -79,7 +82,10 @@ const Feature276 = (props: Props) => {
             {description}
           </p>
 
-          <h3 className="mt-16 text-center text-3xl font-semibold tracking-normal">
+          <h3
+            id="how-it-works"
+            className="mt-16 text-center text-3xl font-semibold tracking-normal"
+          >
             How it works
           </h3>
 

@@ -18,6 +18,7 @@ const Hero233 = ({ className }: Hero233Props) => {
 
   return (
     <section
+      id="home"
       className={cn(
         "relative h-svh max-h-[1200px] min-h-[600px] overflow-hidden bg-background py-32",
         className,

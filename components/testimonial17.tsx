@@ -68,7 +68,7 @@ const Testimonial17 = ({ className }: Testimonial17Props) => {
   }, [api]);
 
   return (
-    <section className={cn("py-32", className)}>
+    <section id="proof" className={cn("py-32", className)}>
       <div className="container">
         <div className="flex flex-col gap-14 lg:grid lg:grid-cols-3 lg:gap-0">
           <h2 className="text-center text-3xl font-bold lg:text-left lg:text-4xl">

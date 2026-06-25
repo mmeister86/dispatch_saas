@@ -42,7 +42,7 @@ const COMPARISON_ROWS = [
 
 const Compare3 = ({ className }: Compare3Props) => {
   return (
-    <section className={cn("py-32", className)}>
+    <section id="comparison" className={cn("py-32", className)}>
       <div className="container">
         <div className="flex flex-col items-center gap-4">
           <Badge variant="outline">Comparison</Badge>

@@ -48,7 +48,7 @@ const Faq15 = ({
   className,
 }: Faq15Props) => {
   return (
-    <section className={cn("py-32", className)}>
+    <section id="faq" className={cn("py-32", className)}>
       <div className="container">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-center text-3xl font-semibold md:text-5xl lg:mx-14">
