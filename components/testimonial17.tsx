@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { CarouselApi } from "@/components/ui/carousel";
 import {
   Carousel,
@@ -14,6 +14,36 @@ import { cn } from "@/lib/utils";
 interface Testimonial17Props {
   className?: string;
 }
+
+const mockedTestimonialSlots = [
+  {
+    id: "testimonial-slot-1",
+    label: "Reserved for beta proof",
+    quote:
+      "This slot is ready for a short quote from a builder who turns commits into publishable X drafts with Dispatch.",
+    name: "Builder slot 1",
+    role: "Ready for real beta quote",
+    initials: "B1",
+  },
+  {
+    id: "testimonial-slot-2",
+    label: "Reserved for beta proof",
+    quote:
+      "This slot is ready for a before-and-after note about replacing manual ChatGPT copy-paste with Dispatch.",
+    name: "Builder slot 2",
+    role: "Ready for real beta quote",
+    initials: "B2",
+  },
+  {
+    id: "testimonial-slot-3",
+    label: "Reserved for beta proof",
+    quote:
+      "This slot is ready for a concrete result from the first public commit-to-post workflow tested by a real builder.",
+    name: "Builder slot 3",
+    role: "Ready for real beta quote",
+    initials: "B3",
+  },
+];
 
 const Testimonial17 = ({ className }: Testimonial17Props) => {
   const [api, setApi] = useState<CarouselApi>();
@@ -42,89 +72,15 @@ const Testimonial17 = ({ className }: Testimonial17Props) => {
       <div className="container">
         <div className="flex flex-col gap-14 lg:grid lg:grid-cols-3 lg:gap-0">
           <h2 className="text-center text-3xl font-bold lg:text-left lg:text-4xl">
-            Teams are thriving with our platform
+            Builder proof slots, ready for beta
           </h2>
           <Carousel setApi={setApi} className="w-full lg:hidden">
             <CarouselContent>
-              <CarouselItem>
-                <div className="rounded-2xl border p-8 select-none">
-                  <img
-                    src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/shadcn-ui-wordmark.svg"
-                    alt="logo"
-                    className="mb-6 h-5 dark:invert"
-                  />
-                  <p className="mb-10 text-xl font-semibold">
-                    Our team has seen an incredible boost in productivity since
-                    adopting this platform. It&apos;s a game-changer.
-                  </p>
-                  <div className="mb-3 flex gap-4">
-                    <Avatar className="size-12 rounded-full ring-1 ring-input">
-                      <AvatarImage
-                        src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-1.webp"
-                        alt="avatar"
-                      />
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">Sarah Williams</p>
-                      <p className="text-muted-foreground">
-                        Head of Product, @company
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-              <CarouselItem>
-                <div className="rounded-2xl border p-8 select-none">
-                  <img
-                    src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/nextjs-wordmark.svg"
-                    alt="logo"
-                    className="mb-6 h-9 dark:invert"
-                  />
-                  <p className="mb-10 text-xl font-semibold">
-                    This tool has streamlined our development process and
-                    improved team collaboration like never before.
-                  </p>
-                  <div className="mb-3 flex gap-4">
-                    <Avatar className="size-12 rounded-full ring-1 ring-input">
-                      <AvatarImage
-                        src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-2.webp"
-                        alt="avatar"
-                      />
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">David Parker</p>
-                      <p className="text-muted-foreground">CTO, @company</p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
-              <CarouselItem>
-                <div className="rounded-2xl border p-8 select-none">
-                  <img
-                    src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/tailwind-wordmark-white.svg"
-                    alt="logo"
-                    className="mb-6 h-4 lg:h-5"
-                  />
-                  <p className="mb-10 text-xl font-semibold">
-                    We have reduced our development cycles by 33.2% thanks to
-                    the efficiency this platform brings to us.
-                  </p>
-                  <div className="mb-3 flex gap-4">
-                    <Avatar className="size-12 rounded-full ring-1 ring-input">
-                      <AvatarImage
-                        src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-3.webp"
-                        alt="avatar"
-                      />
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">Maria Gonzalez</p>
-                      <p className="text-muted-foreground">
-                        Lead Developer, @company
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CarouselItem>
+              {mockedTestimonialSlots.map((slot) => (
+                <CarouselItem key={slot.id}>
+                  <TestimonialSlotCard slot={slot} />
+                </CarouselItem>
+              ))}
             </CarouselContent>
             <div className="mt-8 flex justify-center">
               {Array.from({ length: count }).map((_, index) => (
@@ -140,80 +96,10 @@ const Testimonial17 = ({ className }: Testimonial17Props) => {
             </div>
           </Carousel>
           <div className="col-span-2 hidden grid-cols-2 items-center gap-6 lg:grid">
-            <div className="rounded-2xl border p-8">
-              <img
-                src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/shadcn-ui-wordmark.svg"
-                alt="logo"
-                className="mb-6 h-6 dark:invert"
-              />
-              <p className="mb-10 text-xl font-semibold">
-                Our team has seen an incredible boost in productivity since
-                adopting this platform. It&apos;s a game-changer for us!
-              </p>
-              <div className="mb-3 flex gap-4">
-                <Avatar className="size-12 rounded-full ring-1 ring-input">
-                  <AvatarImage
-                    src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-1.webp"
-                    alt="avatar"
-                  />
-                </Avatar>
-                <div>
-                  <p className="font-medium">Sarah Williams</p>
-                  <p className="text-muted-foreground">
-                    Head of Product, @company
-                  </p>
-                </div>
-              </div>
-            </div>
+            <TestimonialSlotCard slot={mockedTestimonialSlots[0]} />
             <div className="flex flex-col gap-6">
-              <div className="rounded-2xl border p-8">
-                <img
-                  src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/nextjs-wordmark.svg"
-                  alt="logo"
-                  className="mb-6 h-8 dark:invert"
-                />
-                <p className="mb-10 text-xl font-semibold">
-                  This tool has streamlined our development process and improved
-                  team collaboration like never before.
-                </p>
-                <div className="mb-3 flex gap-4">
-                  <Avatar className="size-12 rounded-full ring-1 ring-input">
-                    <AvatarImage
-                      src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-2.webp"
-                      alt="avatar"
-                    />
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">David Parker</p>
-                    <p className="text-muted-foreground">CTO, @company</p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-2xl border p-8">
-                <img
-                  src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/tailwind-wordmark-black.svg"
-                  alt="logo"
-                  className="mb-6 h-4 dark:invert"
-                />
-                <p className="mb-10 text-xl font-semibold">
-                  We’ve reduced our development cycles by 30% thanks to the
-                  efficiency this platform brings.
-                </p>
-                <div className="mb-3 flex gap-4">
-                  <Avatar className="size-12 rounded-full ring-1 ring-input">
-                    <AvatarImage
-                      src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-3.webp"
-                      alt="avatar"
-                    />
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">Maria Gonzalez</p>
-                    <p className="text-muted-foreground">
-                      Lead Developer, @company
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <TestimonialSlotCard slot={mockedTestimonialSlots[1]} />
+              <TestimonialSlotCard slot={mockedTestimonialSlots[2]} />
             </div>
           </div>
         </div>
@@ -221,5 +107,29 @@ const Testimonial17 = ({ className }: Testimonial17Props) => {
     </section>
   );
 };
+
+function TestimonialSlotCard({
+  slot,
+}: {
+  slot: (typeof mockedTestimonialSlots)[number];
+}) {
+  return (
+    <div className="rounded-2xl border p-8 select-none">
+      <p className="mb-6 text-sm font-medium uppercase tracking-normal text-muted-foreground">
+        {slot.label}
+      </p>
+      <p className="mb-10 text-xl font-semibold">{slot.quote}</p>
+      <div className="mb-3 flex gap-4">
+        <Avatar className="size-12 rounded-full ring-1 ring-input">
+          <AvatarFallback>{slot.initials}</AvatarFallback>
+        </Avatar>
+        <div>
+          <p className="font-medium">{slot.name}</p>
+          <p className="text-muted-foreground">{slot.role}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export { Testimonial17 };
