@@ -82,9 +82,20 @@ export default defineSchema({
     .index("by_repoId_and_commitSha", ["repoId", "commitSha"])
     .index("by_status", ["status"]),
 
+  voiceProfiles: defineTable({
+    userId: v.id("users"),
+    summary: v.string(),
+    rules: v.array(v.string()),
+    source: v.union(v.literal("x_import"), v.literal("manual_paste")),
+    sampleCount: v.number(),
+    confirmedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   xOAuthStates: defineTable({
     state: v.string(),
     codeVerifier: v.string(),
+    returnPath: v.optional(v.string()),
     userId: v.id("users"),
     expiresAt: v.number(),
   })

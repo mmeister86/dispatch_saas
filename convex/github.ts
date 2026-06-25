@@ -612,7 +612,7 @@ async function listInstallationRepositories(installationId: string) {
   }));
 }
 
-async function createInstallationAccessToken(installationId: string) {
+export async function createInstallationAccessToken(installationId: string) {
   const appJwt = await createGitHubAppJwt();
   const response = await fetch(
     `https://api.github.com/app/installations/${installationId}/access_tokens`,

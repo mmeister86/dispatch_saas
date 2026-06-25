@@ -23,6 +23,12 @@ const X_TOKEN_URL = "https://api.x.com/2/oauth2/token";
 const X_ME_URL = "https://api.x.com/2/users/me";
 const X_SCOPES = "tweet.read tweet.write media.write users.read offline.access";
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_X_RETURN_PATH = "/dashboard/settings";
+const ALLOWED_X_RETURN_PATHS = new Set([
+  "/dashboard",
+  "/dashboard/onboarding",
+  "/dashboard/settings",
+]);
 
 export const connectionStatus = query({
   args: {},
@@ -52,9 +58,11 @@ export const connectionStatus = query({
 });
 
 export const startConnection = action({
-  args: {},
+  args: {
+    returnPath: v.optional(v.string()),
+  },
   returns: v.object({ url: v.string() }),
-  handler: async (ctx): Promise<{ url: string }> => {
+  handler: async (ctx, args): Promise<{ url: string }> => {
     const identity = await ctx.auth.getUserIdentity();
 
     if (identity === null) {
@@ -75,6 +83,7 @@ export const startConnection = action({
       userId,
       state,
       codeVerifier,
+      returnPath: safeXReturnPath(args.returnPath),
       expiresAt: Date.now() + OAUTH_STATE_TTL_MS,
     });
 
@@ -244,8 +253,10 @@ export const completeOAuthCallback = internalAction({
     code: v.string(),
     state: v.string(),
   },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
+  returns: v.object({
+    returnPath: v.string(),
+  }),
+  handler: async (ctx, args): Promise<{ returnPath: string }> => {
     const oauthState: OAuthState = await ctx.runMutation(
       internal.x.consumeOAuthState,
       {
@@ -271,7 +282,7 @@ export const completeOAuthCallback = internalAction({
       connectedAt: Date.now(),
     });
 
-    return null;
+    return { returnPath: oauthState.returnPath };
   },
 });
 
@@ -451,6 +462,7 @@ export const storeOAuthState = internalMutation({
     userId: v.id("users"),
     state: v.string(),
     codeVerifier: v.string(),
+    returnPath: v.string(),
     expiresAt: v.number(),
   },
   returns: v.null(),
@@ -468,6 +480,7 @@ export const storeOAuthState = internalMutation({
       userId: args.userId,
       state: args.state,
       codeVerifier: args.codeVerifier,
+      returnPath: args.returnPath,
       expiresAt: args.expiresAt,
     });
 
@@ -483,6 +496,7 @@ export const consumeOAuthState = internalMutation({
   returns: v.object({
     userId: v.id("users"),
     codeVerifier: v.string(),
+    returnPath: v.string(),
   }),
   handler: async (ctx, args): Promise<OAuthState> => {
     const existing = await ctx.db
@@ -504,6 +518,7 @@ export const consumeOAuthState = internalMutation({
     return {
       userId: existing.userId,
       codeVerifier: existing.codeVerifier,
+      returnPath: existing.returnPath ?? DEFAULT_X_RETURN_PATH,
     };
   },
 });
@@ -763,6 +778,7 @@ type XProfileResponse = {
 type OAuthState = {
   userId: Id<"users">;
   codeVerifier: string;
+  returnPath: string;
 };
 
 type DraftPostingContext =
@@ -902,6 +918,18 @@ function randomBase64Url(byteLength: number) {
   const bytes = new Uint8Array(byteLength);
   crypto.getRandomValues(bytes);
   return base64UrlEncodeBytes(bytes);
+}
+
+function safeXReturnPath(returnPath: string | undefined) {
+  if (
+    returnPath === undefined ||
+    returnPath.length > 80 ||
+    !ALLOWED_X_RETURN_PATHS.has(returnPath)
+  ) {
+    return DEFAULT_X_RETURN_PATH;
+  }
+
+  return returnPath;
 }
 
 function base64UrlEncodeBytes(bytes: Uint8Array) {

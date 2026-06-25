@@ -257,6 +257,7 @@ async function createLemonCheckout({
   variantId: string;
   email: string;
 }) {
+  const checkoutRedirectUrl = new URL("/dashboard", env.APP_URL);
   const response = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
     method: "POST",
     headers: {
@@ -281,7 +282,7 @@ async function createLemonCheckout({
             },
           },
           product_options: {
-            redirect_url: env.APP_URL,
+            redirect_url: checkoutRedirectUrl.toString(),
             receipt_button_text: "Go to Dispatch",
             receipt_thank_you_note:
               "Thanks for subscribing. Your first Dispatch draft is waiting.",

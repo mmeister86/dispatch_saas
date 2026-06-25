@@ -71,6 +71,29 @@ test("prompt assembly includes the commit message and the three expected angles"
   assert.match(prompt.prompt, /JSON/i);
 });
 
+test("prompt assembly can include a confirmed voice profile without raw examples", async () => {
+  const { buildCommitVariantPrompt } = await generationCore();
+
+  const prompt = buildCommitVariantPrompt({
+    commitMessage: "ship onboarding import for the latest connected repo commit",
+    voiceProfile: {
+      summary:
+        "Direct, practical indie-builder notes with short context and a concrete lesson.",
+      rules: [
+        "Use first person when describing tradeoffs.",
+        "Prefer specific product detail over broad inspiration.",
+        "Avoid launch-hype language.",
+      ],
+    },
+  });
+
+  assert.match(prompt.prompt, /Confirmed writing style/i);
+  assert.match(prompt.prompt, /Direct, practical indie-builder notes/i);
+  assert.match(prompt.prompt, /Use first person/);
+  assert.match(prompt.prompt, /Avoid launch-hype language/);
+  assert.doesNotMatch(prompt.prompt, /raw examples|sample tweets|example posts/i);
+});
+
 test("prompt assembly deterministically bounds very large commit messages", async () => {
   const { buildCommitVariantPrompt, MAX_COMMIT_MESSAGE_LENGTH } =
     await generationCore();
@@ -174,7 +197,7 @@ test("draft variant population stays internal and patches only generated variant
   assert.match(generationSource, /export const populateDraftVariants = internalAction\(/);
   assert.match(generationSource, /draftId:\s*v\.id\("drafts"\)/);
   assert.match(generationSource, /commitMessage:\s*v\.string\(\)/);
-  assert.match(generationSource, /generateVariantsForCommitMessage\(args\.commitMessage\)/);
+  assert.match(generationSource, /generateVariantsForCommitMessage\(\{\s*commitMessage:\s*args\.commitMessage/s);
   assert.match(
     generationSource,
     /ctx\.runMutation\(internal\.generation\.updateDraftVariants/,
@@ -183,4 +206,15 @@ test("draft variant population stays internal and patches only generated variant
   assert.match(generationSource, /variants:\s*v\.array\(v\.string\(\)\)/);
   assert.match(generationSource, /ctx\.db\.patch\(args\.draftId,\s*\{\s*variants:\s*args\.variants,\s*\}\)/s);
   assert.doesNotMatch(generationSource, /updateDraftVariants[\s\S]*status:\s*"draft"/);
+});
+
+test("generation action accepts an optional confirmed voice profile", async () => {
+  const generationSource = await read("convex/generation.ts");
+
+  assert.match(generationSource, /voiceProfileValidator\s*=\s*v\.object\(\{/);
+  assert.match(generationSource, /voiceProfile:\s*v\.optional\(voiceProfileValidator\)/);
+  assert.match(generationSource, /summary:\s*v\.string\(\)/);
+  assert.match(generationSource, /rules:\s*v\.array\(v\.string\(\)\)/);
+  assert.match(generationSource, /voiceProfile:\s*args\.voiceProfile/);
+  assert.doesNotMatch(generationSource, /rawTweets|tweetTexts|samples/);
 });

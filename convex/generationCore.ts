@@ -23,10 +23,17 @@ export type CommitVariantPrompt = {
   prompt: string;
 };
 
+export type ConfirmedVoiceProfile = {
+  summary: string;
+  rules: string[];
+};
+
 export function buildCommitVariantPrompt({
   commitMessage,
+  voiceProfile,
 }: {
   commitMessage: string;
+  voiceProfile?: ConfirmedVoiceProfile;
 }): CommitVariantPrompt {
   const normalizedCommitMessage = commitMessage.trim();
 
@@ -47,6 +54,16 @@ export function buildCommitVariantPrompt({
       "Commit message:",
       boundedCommitMessage,
       "",
+      ...(voiceProfile
+        ? [
+            "Confirmed writing style:",
+            voiceProfile.summary.trim(),
+            "",
+            "Style rules to follow:",
+            ...voiceProfile.rules.map((rule) => `- ${rule.trim()}`),
+            "",
+          ]
+        : []),
       "Return JSON with a variants array only.",
       "Each variant must be under 280 characters.",
       "Make the variants distinct and cover these angles when possible:",

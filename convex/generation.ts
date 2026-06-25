@@ -13,13 +13,22 @@ const variantsSchema = z.object({
   variants: z.array(z.string()).min(2).max(3),
 });
 
+const voiceProfileValidator = v.object({
+  summary: v.string(),
+  rules: v.array(v.string()),
+});
+
 export const generateCommitVariants = internalAction({
   args: {
     commitMessage: v.string(),
+    voiceProfile: v.optional(voiceProfileValidator),
   },
   returns: v.array(v.string()),
   handler: async (_ctx, args) => {
-    return await generateVariantsForCommitMessage(args.commitMessage);
+    return await generateVariantsForCommitMessage({
+      commitMessage: args.commitMessage,
+      voiceProfile: args.voiceProfile,
+    });
   },
 });
 
@@ -27,10 +36,14 @@ export const populateDraftVariants = internalAction({
   args: {
     draftId: v.id("drafts"),
     commitMessage: v.string(),
+    voiceProfile: v.optional(voiceProfileValidator),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const variants = await generateVariantsForCommitMessage(args.commitMessage);
+    const variants = await generateVariantsForCommitMessage({
+      commitMessage: args.commitMessage,
+      voiceProfile: args.voiceProfile,
+    });
 
     await ctx.runMutation(internal.generation.updateDraftVariants, {
       draftId: args.draftId,
@@ -55,9 +68,16 @@ export const updateDraftVariants = internalMutation({
   },
 });
 
-async function generateVariantsForCommitMessage(commitMessage: string) {
+async function generateVariantsForCommitMessage({
+  commitMessage,
+  voiceProfile,
+}: {
+  commitMessage: string;
+  voiceProfile?: { summary: string; rules: string[] };
+}) {
   const prompt = buildCommitVariantPrompt({
     commitMessage,
+    voiceProfile,
   });
   const openai = createOpenAI({
     apiKey: env.OPENAI_API_KEY,

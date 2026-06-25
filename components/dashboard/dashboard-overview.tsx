@@ -77,6 +77,7 @@ function DashboardGate({
 }
 
 function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
+  const onboardingStatus = useQuery(api.onboarding.status);
   const drafts = useQuery(api.drafts.listForReview);
   const connection = useQuery(api.github.connectedRepos);
   const xStatus = useQuery(api.x.connectionStatus);
@@ -85,6 +86,31 @@ function ActiveDashboardOverview({ access }: { access: ActiveAccess }) {
   );
   const draftCount = drafts?.filter((draft) => draft.status === "draft").length;
   const repoCount = connection?.repoCount ?? 0;
+
+  if (onboardingStatus === undefined) {
+    return (
+      <DashboardGate
+        actionHref="/dashboard/onboarding"
+        actionLabel="Loading onboarding..."
+        description="Dispatch is checking whether your first draft setup is complete."
+        title="Checking onboarding."
+      />
+    );
+  }
+
+  if (
+    onboardingStatus.state === "onboarding" &&
+    !onboardingStatus.completed
+  ) {
+    return (
+      <DashboardGate
+        actionHref="/dashboard/onboarding"
+        actionLabel="Complete onboarding"
+        description="Teach Dispatch your writing style, import recent commits from a connected repo, and generate your first real drafts."
+        title="Complete onboarding before opening the dashboard."
+      />
+    );
+  }
 
   return (
     <div className="grid gap-6">
