@@ -45,6 +45,7 @@ test("schema stores X tokens server-side and short-lived OAuth state", async () 
   assert.match(source, /xOAuthStates:\s*defineTable\(\{/);
   assert.match(source, /state:\s*v\.string\(\)/);
   assert.match(source, /codeVerifier:\s*v\.string\(\)/);
+  assert.match(source, /returnPath:\s*v\.optional\(v\.string\(\)\)/);
   assert.match(source, /userId:\s*v\.id\("users"\)/);
   assert.match(source, /expiresAt:\s*v\.number\(\)/);
   assert.match(source, /\.index\("by_state",\s*\["state"\]\)/);
@@ -90,6 +91,8 @@ test("X OAuth start action builds an authorization URL with PKCE and launch scop
   assert.match(startConnectionSource, /client_id/);
   assert.match(startConnectionSource, /redirect_uri/);
   assert.match(startConnectionSource, /state/);
+  assert.match(startConnectionSource, /returnPath:\s*v\.optional\(v\.string\(\)\)/);
+  assert.match(startConnectionSource, /safeXReturnPath\(args\.returnPath\)/);
   assert.match(startConnectionSource, /code_challenge/);
   assert.match(startConnectionSource, /code_challenge_method/);
   assert.match(startConnectionSource, /S256/);
@@ -111,7 +114,11 @@ test("X OAuth callback is handled by Convex HTTP and stores tokens through inter
   assert.match(httpSource, /!OAUTH_STATE_PATTERN\.test\(state\)/);
   assert.match(httpSource, /path:\s*"\/x\/oauth\/callback"/);
   assert.match(httpSource, /method:\s*"GET"/);
-  assert.match(httpSource, /ctx\.runAction\(internal\.x\.completeOAuthCallback/);
+  assert.match(
+    httpSource,
+    /const result = await ctx\.runAction\(internal\.x\.completeOAuthCallback/,
+  );
+  assert.match(httpSource, /redirectToApp\("x=connected",\s*result\.returnPath\)/);
   assert.match(httpSource, /env\.APP_URL/);
   assert.match(httpSource, /\/dashboard\/settings/);
   assert.match(httpSource, /x=connected/);
@@ -139,12 +146,20 @@ test("X OAuth state creation replaces prior user states before inserting", async
     source.indexOf("export const storeOAuthState"),
     source.indexOf("export const consumeOAuthState"),
   );
+  const consumeStateSource = source.slice(
+    source.indexOf("export const consumeOAuthState"),
+    source.indexOf("export const storeXTokens"),
+  );
 
   assert.match(storeStateSource, /withIndex\("by_userId"/);
   assert.match(storeStateSource, /q\.eq\("userId",\s*args\.userId\)/);
   assert.match(storeStateSource, /for \(const existingState of existingStates\)/);
   assert.match(storeStateSource, /ctx\.db\.delete\(existingState\._id\)/);
+  assert.match(storeStateSource, /returnPath:\s*v\.string\(\)/);
+  assert.match(storeStateSource, /returnPath:\s*args\.returnPath/);
   assert.match(storeStateSource, /ctx\.db\.insert\("xOAuthStates"/);
+  assert.match(consumeStateSource, /returnPath:\s*v\.string\(\)/);
+  assert.match(consumeStateSource, /returnPath:\s*existing\.returnPath \?\? DEFAULT_X_RETURN_PATH/);
 });
 
 test("X token refresh uses refresh_token grant and stores rotated tokens", async () => {
@@ -173,6 +188,7 @@ test("subscriber workspace exposes the X account connection flow", async () => {
   assert.match(source, /api\.x\.startConnection/);
   assert.match(source, /Connect X account/);
   assert.match(source, /X account/);
+  assert.match(source, /startConnection\(\{\s*returnPath:\s*"\/dashboard\/settings",?\s*\}\)/);
   assert.match(source, /window\.location\.assign\(connection\.url\)/);
   assert.doesNotMatch(source, /xAccessToken|xRefreshToken/);
 });

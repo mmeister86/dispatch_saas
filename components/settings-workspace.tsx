@@ -23,6 +23,13 @@ type PendingSelection = {
   repositories: RepositoryOption[];
 };
 
+type GitHubInstallReturnPath = "/dashboard/settings" | "/dashboard/onboarding";
+
+type GitHubRepoPanelProps = {
+  installReturnPath?: GitHubInstallReturnPath;
+  variant?: "settings" | "embedded";
+};
+
 type ActiveAccess = {
   email?: string;
   plan: "good" | "better";
@@ -31,6 +38,13 @@ type ActiveAccess = {
   postLimit: number;
   postsRemaining: number;
 };
+
+const DEFAULT_GITHUB_INSTALL_RETURN_PATH = "/dashboard/settings";
+const GITHUB_INSTALL_RETURN_PATH_KEY = "dispatch.githubInstallReturnPath";
+const ALLOWED_GITHUB_INSTALL_RETURN_PATHS = new Set<GitHubInstallReturnPath>([
+  "/dashboard/settings",
+  "/dashboard/onboarding",
+]);
 
 export function SettingsWorkspace({ embedded = false }: { embedded?: boolean } = {}) {
   const { user } = useUser();
@@ -290,7 +304,9 @@ export function XAccountPanel() {
     setNotice(null);
 
     try {
-      const connection = await startConnection({});
+      const connection = await startConnection({
+        returnPath: "/dashboard/settings",
+      });
       window.location.assign(connection.url);
     } catch (err) {
       setError(errorMessage(err, "X connection failed. Try again."));
@@ -389,7 +405,10 @@ export function XAccountPanel() {
   );
 }
 
-function GitHubRepoPanel() {
+export function GitHubRepoPanel({
+  installReturnPath = DEFAULT_GITHUB_INSTALL_RETURN_PATH,
+  variant = "settings",
+}: GitHubRepoPanelProps = {}) {
   const connection = useQuery(api.github.connectedRepos);
   const completeInstallation = useAction(api.github.completeInstallation);
   const connectInstalledRepository = useAction(
@@ -426,31 +445,39 @@ function GitHubRepoPanel() {
       return;
     }
 
-    processedInstallationId.current = installationId;
-    setIsCompletingInstallation(true);
-    setNotice(null);
-    setError(null);
+    if (redirectStoredGitHubInstallReturn(installationId)) {
+      return;
+    }
 
-    void completeInstallation({ installationId })
-      .then((result) => {
-        if (result.kind === "selectionRequired") {
-          setPendingSelection({
-            installationId,
-            repositories: result.repositories,
-          });
-          return;
-        }
+    const frame = window.requestAnimationFrame(() => {
+      processedInstallationId.current = installationId;
+      setIsCompletingInstallation(true);
+      setNotice(null);
+      setError(null);
 
-        setPendingSelection(null);
-        setNotice(`${result.repo.fullName} is connected.`);
-        clearInstallationQueryParams();
-      })
-      .catch((err) => {
-        setError(errorMessage(err));
-      })
-      .finally(() => {
-        setIsCompletingInstallation(false);
-      });
+      void completeInstallation({ installationId })
+        .then((result) => {
+          if (result.kind === "selectionRequired") {
+            setPendingSelection({
+              installationId,
+              repositories: result.repositories,
+            });
+            return;
+          }
+
+          setPendingSelection(null);
+          setNotice(`${result.repo.fullName} is connected.`);
+          clearInstallationQueryParams();
+        })
+        .catch((err) => {
+          setError(errorMessage(err));
+        })
+        .finally(() => {
+          setIsCompletingInstallation(false);
+        });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [completeInstallation]);
 
   useEffect(() => {
@@ -581,14 +608,21 @@ function GitHubRepoPanel() {
     connection.hasGitHubInstallation &&
     canConnectMore &&
     !isCompletingInstallation;
+  const Root = variant === "embedded" ? "div" : "section";
+  const rootClassName =
+    variant === "embedded"
+      ? "grid gap-4"
+      : "rounded-lg border border-zinc-200 bg-white p-5";
+  const heading =
+    variant === "embedded" ? "Connect GitHub repository" : "Manage connected repos";
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-5">
+    <Root className={rootClassName}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-medium text-zinc-500">GitHub repo</p>
           <h2 className="mt-2 text-xl font-semibold tracking-normal">
-            Manage connected repos
+            {heading}
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-700">
             Dispatch watches selected repositories through the GitHub App push
@@ -616,6 +650,7 @@ function GitHubRepoPanel() {
             <a
               className="flex h-10 w-fit items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
               href={installUrl}
+              onClick={() => rememberGitHubInstallReturnPath(installReturnPath)}
             >
               Install GitHub App
             </a>
@@ -774,7 +809,7 @@ function GitHubRepoPanel() {
           ))}
         </div>
       ) : null}
-    </section>
+    </Root>
   );
 }
 
@@ -864,6 +899,47 @@ function clearInstallationQueryParams() {
   url.searchParams.delete("installation_id");
   url.searchParams.delete("setup_action");
   window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+}
+
+function rememberGitHubInstallReturnPath(returnPath: GitHubInstallReturnPath) {
+  if (returnPath === DEFAULT_GITHUB_INSTALL_RETURN_PATH) {
+    window.sessionStorage.removeItem(GITHUB_INSTALL_RETURN_PATH_KEY);
+    return;
+  }
+
+  window.sessionStorage.setItem(GITHUB_INSTALL_RETURN_PATH_KEY, returnPath);
+}
+
+function redirectStoredGitHubInstallReturn(installationId: string) {
+  const storedReturnPath = window.sessionStorage.getItem(
+    GITHUB_INSTALL_RETURN_PATH_KEY,
+  );
+
+  if (!isGitHubInstallReturnPath(storedReturnPath)) {
+    window.sessionStorage.removeItem(GITHUB_INSTALL_RETURN_PATH_KEY);
+    return false;
+  }
+
+  window.sessionStorage.removeItem(GITHUB_INSTALL_RETURN_PATH_KEY);
+
+  if (storedReturnPath === window.location.pathname) {
+    return false;
+  }
+
+  const url = new URL(storedReturnPath, window.location.origin);
+  url.searchParams.set("installation_id", installationId);
+  window.location.assign(url.toString());
+
+  return true;
+}
+
+function isGitHubInstallReturnPath(
+  value: string | null,
+): value is GitHubInstallReturnPath {
+  return (
+    value !== null &&
+    ALLOWED_GITHUB_INSTALL_RETURN_PATHS.has(value as GitHubInstallReturnPath)
+  );
 }
 
 function extractGitHubInstallationUrlId(value: string) {

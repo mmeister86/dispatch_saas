@@ -85,3 +85,25 @@ test("schema defines the indexes needed by upcoming core tasks", async () => {
     assert.match(source, new RegExp(`\\.index\\("${indexName}"`));
   }
 });
+
+test("voice profiles store only derived onboarding style guidance", async () => {
+  const source = await read("convex/schema.ts");
+  const profileSource = source.slice(
+    source.indexOf("voiceProfiles: defineTable"),
+    source.indexOf("xOAuthStates: defineTable"),
+  );
+
+  assert.match(source, /voiceProfiles:\s*defineTable\(\{/);
+  assert.match(profileSource, /userId:\s*v\.id\("users"\)/);
+  assert.match(profileSource, /summary:\s*v\.string\(\)/);
+  assert.match(profileSource, /rules:\s*v\.array\(v\.string\(\)\)/);
+  assert.match(
+    profileSource,
+    /source:\s*v\.union\(\s*v\.literal\("x_import"\),\s*v\.literal\("manual_paste"\),?\s*\)/s,
+  );
+  assert.match(profileSource, /sampleCount:\s*v\.number\(\)/);
+  assert.match(profileSource, /confirmedAt:\s*v\.optional\(v\.number\(\)\)/);
+  assert.match(profileSource, /updatedAt:\s*v\.number\(\)/);
+  assert.match(profileSource, /\.index\("by_userId",\s*\["userId"\]\)/);
+  assert.doesNotMatch(profileSource, /raw|tweetText|tweetTexts|samples|examples/);
+});

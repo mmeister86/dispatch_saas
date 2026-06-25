@@ -93,8 +93,11 @@ http.route({
     }
 
     try {
-      await ctx.runAction(internal.x.completeOAuthCallback, { code, state });
-      return redirectToApp("x=connected");
+      const result = await ctx.runAction(internal.x.completeOAuthCallback, {
+        code,
+        state,
+      });
+      return redirectToApp("x=connected", result.returnPath);
     } catch {
       return redirectToApp("x=error");
     }
@@ -378,9 +381,9 @@ async function hasAllowedImageSignature(file: File) {
   return false;
 }
 
-function redirectToApp(query: string) {
+function redirectToApp(query: string, pathname = "/dashboard/settings") {
   const url = new URL(env.APP_URL);
-  url.pathname = "/dashboard/settings";
+  url.pathname = pathname;
   url.search = query;
 
   return new Response(null, {

@@ -15,6 +15,7 @@ import type * as generation from "../generation.js";
 import type * as generationCore from "../generationCore.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
+import type * as onboarding from "../onboarding.js";
 import type * as planLimits from "../planLimits.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as viewer from "../viewer.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   generationCore: typeof generationCore;
   github: typeof github;
   http: typeof http;
+  onboarding: typeof onboarding;
   planLimits: typeof planLimits;
   rateLimits: typeof rateLimits;
   viewer: typeof viewer;

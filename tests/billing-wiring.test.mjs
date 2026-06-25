@@ -57,6 +57,14 @@ test("checkout creation derives the user server-side and embeds Lemon custom dat
   assert.match(source, /return\s+\{\s*url:/);
 });
 
+test("checkout redirects successful purchases to the dashboard", async () => {
+  const source = await read("convex/billing.ts");
+
+  assert.match(source, /const checkoutRedirectUrl = new URL\("\/dashboard",\s*env\.APP_URL\)/);
+  assert.match(source, /redirect_url:\s*checkoutRedirectUrl\.toString\(\)/);
+  assert.doesNotMatch(source, /redirect_url:\s*env\.APP_URL/);
+});
+
 test("Lemon Squeezy webhook verifies raw body signature in Convex HTTP", async () => {
   const source = await read("convex/http.ts");
 
