@@ -35,6 +35,30 @@ test("draft review canvas makes variant selection, editing, and post readiness e
   assert.match(editorSource, /Pick or write a post before publishing\./);
 });
 
+test("draft review blocks editing while variants are still generating", async () => {
+  const source = await read("components/drafts-workspace.tsx");
+  const editorSource = source.slice(
+    source.indexOf("function DraftEditorCanvas"),
+    source.indexOf("function groupDraftsByRepo"),
+  );
+  const generatingSource = editorSource.slice(
+    editorSource.indexOf("isGeneratingVariants"),
+    editorSource.indexOf("{draft.variants.map"),
+  );
+
+  assert.match(editorSource, /const isGeneratingVariants =\s+draft\.status === "draft" &&\s+draft\.variants\.length === 0/);
+  assert.match(generatingSource, /Generating post variants\.\.\./);
+  assert.match(generatingSource, /The editor will unlock when\s+variants are ready\./);
+  assert.match(generatingSource, /aria-live="polite"/);
+  assert.match(generatingSource, /role="status"/);
+  assert.match(generatingSource, /animate-pulse/);
+  assert.match(editorSource, /!isGeneratingVariants && \(/);
+  assert.ok(
+    generatingSource.indexOf("Generating post variants...") <
+      editorSource.indexOf("<textarea"),
+  );
+});
+
 test("draft review keeps image upload optional and exposes accessible status feedback", async () => {
   const source = await read("components/drafts-workspace.tsx");
   const editorSource = source.slice(
