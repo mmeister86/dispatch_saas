@@ -1,10 +1,10 @@
 ---
 id: TASK-53
 title: Improve draft generation loading state
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-06-25 13:15'
-updated_date: '2026-06-25 13:19'
+updated_date: '2026-06-25 13:20'
 labels:
   - ui
   - drafts
@@ -47,3 +47,11 @@ Make drafts whose variants are still empty read clearly as in-progress generatio
 <!-- SECTION:NOTES:BEGIN -->
 Implemented the pending-generation UI and queue badge. Verification: targeted draft tests passed 6/6; full `pnpm test` passed 120/120 with the existing Node ESM warning; `pnpm exec tsc --noEmit` exited 0; `pnpm lint` exited 0 with 4 existing generated Convex warnings. Screenshot was captured from the live Drafts page, but the currently selected live draft was already Posted, so pending-state visual proof relies on source-contract tests unless a live empty-variant draft is selected/created manually.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Improved the draft generation pending experience for commits whose draft row exists before generated variants are available. Empty-variant draft rows now show a `Generating` queue badge, and the detail view keeps the commit context visible while replacing the empty editor with an accessible `Generating post variants...` status panel and skeleton placeholders. Text editing, image upload, and posting controls stay hidden until generated variants exist.
+
+Verification completed: targeted draft tests passed 6/6, full `pnpm test` passed 120/120, `pnpm exec tsc --noEmit` exited 0, and `pnpm lint` exited 0 with only existing generated Convex warnings. User manually verified with a new push that the loading state is shown.
+<!-- SECTION:FINAL_SUMMARY:END -->
