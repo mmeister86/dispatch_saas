@@ -1,10 +1,10 @@
 ---
 id: TASK-54
 title: Route signed-out dashboard visitors through dedicated auth pages
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-06-25 19:31'
-updated_date: '2026-06-25 19:35'
+updated_date: '2026-06-25 19:41'
 labels:
   - auth
   - dashboard
@@ -65,3 +65,13 @@ Verification:
 
 Notes: Next 16 build emits a warning that the middleware file convention is deprecated in favor of proxy, but the requested Clerk middleware implementation compiles and is recognized as Proxy (Middleware). TASK-54 remains In Progress pending user manual confirmation before Done.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added dedicated Clerk-backed /login and /sign-up routes, configured ClerkProvider with those auth URLs and /dashboard fallbacks, and protected /dashboard plus all subroutes through Clerk middleware before the dashboard shell renders. Replaced dashboard-local signed-out SignInButton modal fallbacks with /login links.
+
+Verification completed before finalization: focused auth/dashboard tests passed 14/14; full pnpm test passed 128/128; pnpm exec tsc --noEmit passed; pnpm lint passed with 0 errors and 13 existing warnings; pnpm build passed outside the sandbox after Google Font network access; browser smoke confirmed signed-out dashboard routes redirect to /login?redirect_url=... and /sign-up renders Clerk sign-up with Dispatch branding.
+
+Note: Next 16 emits a warning that the middleware file convention is deprecated in favor of proxy, but the requested Clerk middleware implementation compiles and is recognized by the build.
+<!-- SECTION:FINAL_SUMMARY:END -->
