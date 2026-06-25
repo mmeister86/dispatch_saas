@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,14 +44,12 @@ export function DashboardOverview() {
       <DashboardGate
         action={
           signedOut ? (
-            <SignInButton mode="modal">
-              <button
-                className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
-                type="button"
-              >
-                Sign in
-              </button>
-            </SignInButton>
+            <Link
+              className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"
+              href="/login"
+            >
+              Sign in
+            </Link>
           ) : (
             <Link
               className="mt-5 inline-flex h-10 items-center rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800"

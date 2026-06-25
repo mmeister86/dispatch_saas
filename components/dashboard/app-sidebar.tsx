@@ -1,6 +1,6 @@
 "use client";
 
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -106,14 +106,12 @@ export function AppSidebar() {
               ) : null}
             </div>
             {signedOut ? (
-              <SignInButton mode="modal">
-                <button
-                  className="rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-semibold text-white"
-                  type="button"
-                >
-                  Sign in
-                </button>
-              </SignInButton>
+              <Link
+                className="rounded-md bg-zinc-950 px-3 py-1.5 text-sm font-semibold text-white"
+                href="/login"
+              >
+                Sign in
+              </Link>
             ) : (
               <UserButton />
             )}

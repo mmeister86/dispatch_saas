@@ -47,6 +47,8 @@ test("/dashboard renders the canonical shadcn sidebar app shell", async () => {
   assert.doesNotMatch(sidebarSource, /NavSecondary/);
   assert.doesNotMatch(sidebarSource, /Secondary/);
   assert.match(sidebarSource, /UserButton/);
+  assert.doesNotMatch(sidebarSource, /SignInButton/);
+  assert.match(sidebarSource, /href="\/login"/);
   assert.match(sidebarSource, /postsRemaining/);
   assert.match(sidebarSource, /aria-current=\{active \? "page" : undefined\}/);
   assert.match(sidebarSource, /"block rounded-md text-white"/);
@@ -69,7 +71,8 @@ test("dashboard overview derives status from existing Convex data and real X ana
     overviewSource,
     /access\.state === "signedOut" && isSignedIn[\s\S]*return null;/,
   );
-  assert.match(overviewSource, /SignInButton/);
+  assert.doesNotMatch(overviewSource, /SignInButton/);
+  assert.match(overviewSource, /href="\/login"/);
   assert.match(overviewSource, /access === undefined[\s\S]*return null;/);
   assert.match(overviewSource, /Sign in to open the dashboard\./);
   assert.doesNotMatch(overviewSource, /Checking access\.\.\./);
