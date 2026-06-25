@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Clock, Heart, Home, Wallet } from "lucide-react";
+import { CalendarX, GitCommit, MessageSquareText, Send } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,33 +17,33 @@ interface Faq15Props {
 
 const defaultItems: FaqItem[] = [
   {
-    icon: Heart,
-    heading: "Save a life, gain a friend",
+    icon: Send,
+    heading: "Does Dispatch post automatically?",
     description:
-      "By choosing to adopt, you're giving a deserving animal a second chance at happiness while gaining a loyal companion who will bring joy to your life.",
+      "No. Dispatch creates the draft. You review it, edit if needed, and decide when to post.",
   },
   {
-    icon: Wallet,
-    heading: "More affordable than buying",
+    icon: GitCommit,
+    heading: "Is this just a ChatGPT wrapper?",
     description:
-      "Adoption fees typically include vaccinations, microchipping, and spaying/neutering, making it a more cost-effective option than purchasing from a breeder.",
+      "No. Dispatch starts with your GitHub commit, pulls the context, finds the build-in-public angle, and gives you post-ready variants.",
   },
   {
-    icon: Clock,
-    heading: "Skip the puppy phase",
+    icon: CalendarX,
+    heading: "Do I need a content calendar?",
     description:
-      "Many shelter pets are already house-trained and understand basic commands, saving you time and effort in the training process.",
+      "No. Dispatch is built around your actual shipping rhythm, not a separate posting schedule.",
   },
   {
-    icon: Home,
-    heading: "Support local shelters",
+    icon: MessageSquareText,
+    heading: "Is there a free plan?",
     description:
-      "Your adoption helps support the vital work of local shelters, enabling them to continue rescuing and caring for animals in need.",
+      "No. Dispatch is paid from day one so the product can stay focused on people who are actively building and posting.",
   },
 ];
 
 const Faq15 = ({
-  title = "Why should you adopt a pet from your local shelter?",
+  title = "Questions before your first draft?",
   items = defaultItems,
   className,
 }: Faq15Props) => {

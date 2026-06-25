@@ -235,6 +235,43 @@ test("testimonial block exposes honest mocked slots ready for beta proof", async
   }
 });
 
+test("faq block uses the documented Dispatch questions", async () => {
+  const source = await read("components/faq15.tsx");
+  const expectedCopy = [
+    "Questions before your first draft?",
+    "Does Dispatch post automatically?",
+    "No. Dispatch creates the draft. You review it, edit if needed, and decide when to post.",
+    "Is this just a ChatGPT wrapper?",
+    "No. Dispatch starts with your GitHub commit, pulls the context, finds the build-in-public angle, and gives you post-ready variants.",
+    "Do I need a content calendar?",
+    "No. Dispatch is built around your actual shipping rhythm, not a separate posting schedule.",
+    "Is there a free plan?",
+    "No. Dispatch is paid from day one so the product can stay focused on people who are actively building and posting.",
+  ];
+  const placeholderCopy = [
+    "Why should you adopt a pet from your local shelter?",
+    "Save a life, gain a friend",
+    "More affordable than buying",
+    "Skip the puppy phase",
+    "Support local shelters",
+    "animal",
+    "shelter",
+    "pet",
+    "puppy",
+    "vaccinations",
+  ];
+
+  for (const copy of expectedCopy) {
+    assert.match(source, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
+  for (const placeholder of placeholderCopy) {
+    assert.doesNotMatch(source, new RegExp(placeholder, "i"));
+  }
+
+  assert.doesNotMatch(source, /import \{ Clock, Heart, Home, Wallet \}/);
+});
+
 test("landing skeleton keeps Task-25 demo and later website copy out of scope", async () => {
   const pageSource = await read("app/page.tsx");
   const featureSource = await read("components/feature276.tsx");
