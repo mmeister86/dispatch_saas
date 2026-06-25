@@ -1,11 +1,11 @@
 ---
 id: TASK-29.1
 title: 'T-035a: Adapt landing FAQ from product docs'
-status: In Progress
+status: Done
 assignee:
   - '@Codex'
 created_date: '2026-06-25 20:53'
-updated_date: '2026-06-25 20:54'
+updated_date: '2026-06-25 20:56'
 labels:
   - phase-3
   - landing
@@ -58,3 +58,11 @@ Verification: `pnpm exec node --test tests/landing-block-skeleton.test.mjs` pass
 
 2026-06-25: Acceptance criteria verified with focused landing test and TypeScript check. Leaving task In Progress pending user confirmation before Done.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Adapted the landing FAQ to use the documented Dispatch FAQ copy from `.docs/T-006-positioning-landing-copy.md`. The existing FAQ block now answers automatic posting, ChatGPT-wrapper positioning, content-calendar need, and free-plan availability, and no longer contains the shadcnblocks shelter/pet placeholder copy.
+
+Verification completed before user acceptance: `pnpm exec node --test tests/landing-block-skeleton.test.mjs` passed 11/11 and `pnpm exec tsc --noEmit` passed. User confirmed task completion on 2026-06-25.
+<!-- SECTION:FINAL_SUMMARY:END -->
