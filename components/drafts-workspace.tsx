@@ -575,6 +575,7 @@ function RepoDraftGroup({
         <div className="mt-3 grid gap-2">
           {drafts.map((draft) => {
             const isSelected = selectedDraftId === draft._id;
+            const badgeLabel = draftQueueBadgeLabel(draft);
 
             return (
               <button
@@ -599,7 +600,7 @@ function RepoDraftGroup({
                         : "bg-zinc-200 text-zinc-600"
                     }`}
                   >
-                    {draft.status}
+                    {badgeLabel}
                   </span>
                 </span>
                 <span className="mt-2 block break-words text-xs leading-5 opacity-75">
@@ -612,6 +613,14 @@ function RepoDraftGroup({
       )}
     </section>
   );
+}
+
+function draftQueueBadgeLabel(draft: DraftReviewItem) {
+  if (draft.status === "draft" && draft.variants.length === 0) {
+    return "Generating";
+  }
+
+  return draft.status;
 }
 
 function DraftEditorCanvas({
@@ -646,6 +655,8 @@ function DraftEditorCanvas({
   uploadState: MediaUploadState;
 }) {
   const trimmedText = selectedText.trim();
+  const isGeneratingVariants =
+    draft.status === "draft" && draft.variants.length === 0;
   const isUploading = uploadState === "uploading";
   const hasAttachedImage =
     draft.mediaId !== undefined || uploadState === "attached";
@@ -655,7 +666,8 @@ function DraftEditorCanvas({
     trimmedText.length <= 280 &&
     !isCapped &&
     !isPosting &&
-    !isUploading;
+    !isUploading &&
+    !isGeneratingVariants;
   const postReadinessId = `post-readiness-${draft._id}`;
   let postReadinessMessage = "Ready to publish to X.";
 
@@ -731,8 +743,25 @@ function DraftEditorCanvas({
         </div>
       ) : null}
 
-      {draft.variants.length === 0 ? (
-        <p className="mt-6 text-sm text-zinc-500">Generating variants...</p>
+      {isGeneratingVariants ? (
+        <div
+          aria-live="polite"
+          className="mt-6 rounded-md border border-emerald-200 bg-emerald-50 p-5"
+          role="status"
+        >
+          <p className="text-sm font-semibold text-emerald-800">
+            Generating post variants...
+          </p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-900/80">
+            This usually takes a few moments. The editor will unlock when
+            variants are ready.
+          </p>
+          <div aria-hidden="true" className="mt-5 grid gap-3">
+            <div className="h-16 animate-pulse rounded-md bg-white/70" />
+            <div className="h-16 animate-pulse rounded-md bg-white/60" />
+            <div className="h-16 animate-pulse rounded-md bg-white/50" />
+          </div>
+        </div>
       ) : (
         <div className="mt-6 grid gap-3">
           <p className="text-sm font-semibold text-zinc-950">
@@ -766,88 +795,92 @@ function DraftEditorCanvas({
         </div>
       )}
 
-      <textarea
-        aria-label="Post text"
-        className="mt-6 min-h-36 w-full resize-y rounded-md border border-zinc-300 bg-white p-4 text-base leading-7 text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-50"
-        disabled={draft.status !== "draft"}
-        maxLength={280}
-        onChange={(event) => onTextChange(event.target.value)}
-        value={selectedText}
-      />
-      <p className="mt-2 text-right text-xs font-medium text-zinc-500">
-        {selectedText.length}/280
-      </p>
-
-      <div className="mt-6 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
-        <label className="block text-sm">
-          <span className="font-semibold text-zinc-950">Optional image</span>
-          <input
-            accept="image/png,image/jpeg,image/webp"
-            className="mt-3 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
-            disabled={draft.status !== "draft" || isUploading}
-            key={fileInputResetKey}
-            onChange={(event) =>
-              onUpload(event.currentTarget.files?.[0] ?? null)
-            }
-            type="file"
+      {!isGeneratingVariants && (
+        <>
+          <textarea
+            aria-label="Post text"
+            className="mt-6 min-h-36 w-full resize-y rounded-md border border-zinc-300 bg-white p-4 text-base leading-7 text-zinc-950 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-950 disabled:cursor-not-allowed disabled:bg-zinc-50"
+            disabled={draft.status !== "draft"}
+            maxLength={280}
+            onChange={(event) => onTextChange(event.target.value)}
+            value={selectedText}
           />
-        </label>
-        <p className="text-xs text-zinc-500">
-          {imageStatusMessage}
-        </p>
-        {uploadState === "failed" && uploadRecovery === "reconnect" ? (
-          <p className="text-xs leading-5 text-zinc-600">
-            Reconnect X in{" "}
-            <Link
-              className="font-semibold text-zinc-950 underline"
-              href="/dashboard/settings"
-            >
-              settings
-            </Link>{" "}
-            and choose the image again to include it.
+          <p className="mt-2 text-right text-xs font-medium text-zinc-500">
+            {selectedText.length}/280
           </p>
-        ) : uploadState === "failed" && uploadRecovery === "unavailable" ? (
-          <p className="text-xs leading-5 text-zinc-600">
-            Post without an image for now.
-          </p>
-        ) : uploadState === "failed" ? (
-          <p className="text-xs leading-5 text-zinc-600">
-            Choose the image again after resolving the upload error.
-          </p>
-        ) : null}
-      </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          aria-describedby={postReadinessId}
-          className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={!canPost}
-          onClick={onPost}
-          type="button"
-        >
-          {isPosting ? "Posting..." : "Post to X"}
-        </button>
-        <div
-          aria-live="polite"
-          className="flex flex-wrap items-center gap-3"
-          role="status"
-        >
-          <p
-            className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-semibold text-zinc-600"
-            id={postReadinessId}
-          >
-            {postReadinessMessage}
-          </p>
-          {isUploading ? (
-            <p className="text-sm text-zinc-500">Uploading image...</p>
-          ) : null}
-          {notice ? (
-            <p className="rounded-md bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
-              {notice}
-            </p>
-          ) : null}
-        </div>
-      </div>
+          <div className="mt-6 grid gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-4">
+            <label className="block text-sm">
+              <span className="font-semibold text-zinc-950">
+                Optional image
+              </span>
+              <input
+                accept="image/png,image/jpeg,image/webp"
+                className="mt-3 block w-full text-sm text-zinc-600 file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                disabled={draft.status !== "draft" || isUploading}
+                key={fileInputResetKey}
+                onChange={(event) =>
+                  onUpload(event.currentTarget.files?.[0] ?? null)
+                }
+                type="file"
+              />
+            </label>
+            <p className="text-xs text-zinc-500">{imageStatusMessage}</p>
+            {uploadState === "failed" && uploadRecovery === "reconnect" ? (
+              <p className="text-xs leading-5 text-zinc-600">
+                Reconnect X in{" "}
+                <Link
+                  className="font-semibold text-zinc-950 underline"
+                  href="/dashboard/settings"
+                >
+                  settings
+                </Link>{" "}
+                and choose the image again to include it.
+              </p>
+            ) : uploadState === "failed" && uploadRecovery === "unavailable" ? (
+              <p className="text-xs leading-5 text-zinc-600">
+                Post without an image for now.
+              </p>
+            ) : uploadState === "failed" ? (
+              <p className="text-xs leading-5 text-zinc-600">
+                Choose the image again after resolving the upload error.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <button
+              aria-describedby={postReadinessId}
+              className="h-10 rounded-md bg-zinc-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canPost}
+              onClick={onPost}
+              type="button"
+            >
+              {isPosting ? "Posting..." : "Post to X"}
+            </button>
+            <div
+              aria-live="polite"
+              className="flex flex-wrap items-center gap-3"
+              role="status"
+            >
+              <p
+                className="rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-semibold text-zinc-600"
+                id={postReadinessId}
+              >
+                {postReadinessMessage}
+              </p>
+              {isUploading ? (
+                <p className="text-sm text-zinc-500">Uploading image...</p>
+              ) : null}
+              {notice ? (
+                <p className="rounded-md bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+                  {notice}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
 
       {error ? (
         <div

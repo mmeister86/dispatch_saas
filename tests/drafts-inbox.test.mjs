@@ -37,3 +37,16 @@ test("drafts route opens draft detail on a canvas from repository sidebar rows",
   assert.doesNotMatch(source, /role="dialog"|aria-modal|fixed inset-0/);
   assert.doesNotMatch(rowButtonSource, /<div/);
 });
+
+test("draft queue labels empty-variant draft rows as generating", async () => {
+  const source = await read("components/drafts-workspace.tsx");
+  const groupSource = source.slice(
+    source.indexOf("function RepoDraftGroup"),
+    source.indexOf("function DraftEditorCanvas"),
+  );
+
+  assert.match(groupSource, /function draftQueueBadgeLabel\(draft: DraftReviewItem\)/);
+  assert.match(groupSource, /draft\.status === "draft" && draft\.variants\.length === 0/);
+  assert.match(groupSource, /return "Generating"/);
+  assert.match(groupSource, /draftQueueBadgeLabel\(draft\)/);
+});
