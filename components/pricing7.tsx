@@ -60,46 +60,42 @@ const Pricing7 = ({ className }: Pricing7Props) => {
           </p>
         </div>
 
-        <div className="mx-auto grid w-full max-w-5xl gap-4 md:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-5xl gap-4 md:grid-cols-2 md:grid-rows-[auto_auto_auto_1fr_auto]">
           {PLANS.map((plan) => (
             <div
               key={plan.name}
               className={cn(
-                "flex min-w-0 flex-col rounded-lg bg-card p-6",
+                "grid min-w-0 grid-rows-[auto_auto_auto_1fr_auto] rounded-lg bg-card p-6 md:row-span-5 md:grid-rows-subgrid",
                 plan.highlighted
                   ? "border-2 border-primary"
                   : "border border-border",
               )}
             >
-              <div className="flex h-full flex-col justify-between gap-8">
-                <div>
-                  <div className="mb-4 flex min-h-6 items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold">{plan.name}</h3>
-                    {plan.badge ? (
-                      <Badge variant="outline">{plan.badge}</Badge>
-                    ) : null}
-                  </div>
+              <div className="mb-4 flex min-h-6 items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                {plan.badge ? (
+                  <Badge variant="outline">{plan.badge}</Badge>
+                ) : null}
+              </div>
 
-                  <div className="mb-5 flex min-w-0 flex-wrap items-end gap-x-1">
-                    <span className="min-w-0 text-4xl font-medium tracking-tight">
-                      {plan.price}
-                    </span>
-                  </div>
+              <div className="mb-5 flex min-w-0 flex-wrap items-end gap-x-1">
+                <span className="min-w-0 text-4xl font-medium tracking-tight">
+                  {plan.price}
+                </span>
+              </div>
 
-                  <p className="text-muted-foreground">{plan.description}</p>
+              <p className="text-muted-foreground">{plan.description}</p>
 
-                  <ul className="mt-8 flex flex-col gap-3">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex gap-2">
-                        <Check className="mt-1 size-4 shrink-0" />
-                        <span className="min-w-0 wrap-break-word">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <ul className="mt-8 flex flex-col gap-3 self-start">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex gap-2">
+                    <Check className="mt-1 size-4 shrink-0" />
+                    <span className="min-w-0 wrap-break-word">{feature}</span>
+                  </li>
+                ))}
+              </ul>
 
+              <div className="mt-8 self-end">
                 <SignInButton mode="modal">
                   <Button
                     variant={plan.highlighted ? "default" : "outline"}

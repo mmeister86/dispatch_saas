@@ -156,6 +156,9 @@ test("pricing block and header use the approved Good and Better offer", async ()
   assert.match(pricingSource, /300 drafts generated \/ month/);
   assert.match(pricingSource, /Get your first draft/);
   assert.match(pricingSource, /SignInButton/);
+  assert.match(pricingSource, /md:grid-rows-\[auto_auto_auto_1fr_auto\]/);
+  assert.match(pricingSource, /md:row-span-5/);
+  assert.match(pricingSource, /md:grid-rows-subgrid/);
   assert.doesNotMatch(pricingSource, /api\.billing/);
   assert.doesNotMatch(pricingSource, /createCheckout/);
   assert.doesNotMatch(pricingSource, /checkout\.url/);
