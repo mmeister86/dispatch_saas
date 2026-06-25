@@ -36,7 +36,8 @@ test("/dashboard/settings route renders the settings workspace and /settings red
   assert.match(settingsSource, /installation_id/);
   assert.match(settingsSource, /Install GitHub App/);
   assert.match(settingsSource, /Disconnect/);
-  assert.match(settingsSource, /Open billing portal/);
+  assert.match(settingsSource, /Manage subscription/);
+  assert.doesNotMatch(settingsSource, /Open billing portal/);
   assert.match(settingsSource, /<BillingPortalPanel access=\{access\}/);
   assert.doesNotMatch(settingsSource, /Billing lives in the dedicated dashboard billing area/);
   assert.match(settingsSource, /window\.location\.assign\(portal\.url\)/);
@@ -155,7 +156,7 @@ test("disconnect preserves a legacy repo installation id before deleting the row
   assert.ok(deleteIndex > rememberIndex);
 });
 
-test("billing portal action fetches a fresh Lemon Squeezy customer portal URL", async () => {
+test("billing portal action fetches a fresh Lemon Squeezy subscription management URL", async () => {
   const source = await read("convex/billing.ts");
   const schema = await read("convex/schema.ts");
   const portalSource = source.slice(
@@ -173,6 +174,8 @@ test("billing portal action fetches a fresh Lemon Squeezy customer portal URL", 
   assert.match(source, /export const activeSubscriptionForBillingPortal = internalQuery\(\{/);
   assert.match(source, /getActiveSubscription\(ctx,\s*user\._id\)/);
   assert.match(source, /https:\/\/api\.lemonsqueezy\.com\/v1\/subscriptions\/\$\{subscriptionId\}/);
+  assert.match(source, /attributes\?\.urls\?\.customer_portal_update_subscription/);
+  assert.match(source, /customer_portal_update_subscription[\s\S]*\?\?[\s\S]*customer_portal/);
   assert.match(source, /attributes\?\.urls\?\.customer_portal/);
   assert.match(source, /Authorization:\s*`Bearer \$\{env\.LEMONSQUEEZY_API_KEY\}`/);
   assert.doesNotMatch(schema, /customerPortal|billingPortal|portalUrl/);
