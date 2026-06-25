@@ -117,6 +117,60 @@ test("feature block uses the approved empathy and how-it-works copy", async () =
   assert.doesNotMatch(source, /Responsive Design/);
 });
 
+test("pricing block and header use the approved Good and Better offer", async () => {
+  const pageSource = await read("app/page.tsx");
+  const navbarSource = await read("components/navbar11.tsx");
+  const pricingSource = await read("components/pricing7.tsx");
+  const landingSkeleton = pageSource.slice(
+    pageSource.indexOf("function LandingSkeleton"),
+    pageSource.indexOf("function SignedInHome()"),
+  );
+
+  assert.ok(
+    landingSkeleton.indexOf("<Navbar11") < landingSkeleton.indexOf("<Pricing7"),
+    "navbar should render before pricing",
+  );
+
+  assert.match(navbarSource, /Dispatch/);
+  assert.match(navbarSource, /Good €9\/mo/);
+  assert.match(navbarSource, /Better €19\/mo/);
+  assert.match(navbarSource, /SignInButton/);
+  assert.doesNotMatch(navbarSource, /api\.billing/);
+  assert.doesNotMatch(navbarSource, /createCheckout/);
+  assert.doesNotMatch(navbarSource, /checkout\.url/);
+
+  assert.match(
+    pricingSource,
+    /Simple pricing for builders who keep shipping\./,
+  );
+  assert.match(pricingSource, /Good/);
+  assert.match(pricingSource, /€9\/mo/);
+  assert.match(pricingSource, /1 repo/);
+  assert.match(pricingSource, /20 published tweets \/ month/);
+  assert.match(pricingSource, /100 drafts generated \/ month/);
+  assert.match(pricingSource, /Better/);
+  assert.match(pricingSource, /Best for consistent builders/);
+  assert.match(pricingSource, /€19\/mo/);
+  assert.match(pricingSource, /Up to 5 repos/);
+  assert.match(pricingSource, /60 published tweets \/ month/);
+  assert.match(pricingSource, /300 drafts generated \/ month/);
+  assert.match(pricingSource, /Get your first draft/);
+  assert.match(pricingSource, /SignInButton/);
+  assert.doesNotMatch(pricingSource, /api\.billing/);
+  assert.doesNotMatch(pricingSource, /createCheckout/);
+  assert.doesNotMatch(pricingSource, /checkout\.url/);
+  assert.doesNotMatch(pricingSource, /lemonsqueezy/i);
+
+  assert.doesNotMatch(pricingSource, /name:\s*"Free"/);
+  assert.doesNotMatch(pricingSource, /name:\s*"Pro"/);
+  assert.doesNotMatch(pricingSource, /\$0/);
+  assert.doesNotMatch(pricingSource, /\$49/);
+  assert.doesNotMatch(pricingSource, /shadcnblocks\.com/);
+  assert.doesNotMatch(pricingSource, /For individuals getting started/);
+  assert.doesNotMatch(pricingSource, /For professionals/);
+  assert.doesNotMatch(pricingSource, /Yearly/);
+});
+
 test("landing skeleton keeps Task-25 demo and later website copy out of scope", async () => {
   const pageSource = await read("app/page.tsx");
   const featureSource = await read("components/feature276.tsx");
