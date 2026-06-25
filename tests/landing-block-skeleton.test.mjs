@@ -208,6 +208,33 @@ test("comparison block uses the PRD ChatGPT copy-paste rows", async () => {
   }
 });
 
+test("testimonial block exposes honest mocked slots ready for beta proof", async () => {
+  const source = await read("components/testimonial17.tsx");
+  const slotMatches = source.match(/id:\s*"testimonial-slot-/g) ?? [];
+  const fakeProof = [
+    "Sarah Williams",
+    "David Parker",
+    "Maria Gonzalez",
+    "Head of Product",
+    "CTO, @company",
+    "Lead Developer",
+    "incredible boost in productivity",
+    "streamlined our development process",
+    "reduced our development cycles",
+  ];
+
+  assert.ok(slotMatches.length >= 3, "should expose at least 3 slots");
+  assert.ok(slotMatches.length <= 5, "should expose at most 5 slots");
+  assert.match(source, /mockedTestimonialSlots/);
+  assert.match(source, /Reserved for beta proof/);
+  assert.match(source, /Ready for real beta quote/);
+  assert.doesNotMatch(source, /TASK-32/);
+
+  for (const placeholder of fakeProof) {
+    assert.doesNotMatch(source, new RegExp(placeholder));
+  }
+});
+
 test("landing skeleton keeps Task-25 demo and later website copy out of scope", async () => {
   const pageSource = await read("app/page.tsx");
   const featureSource = await read("components/feature276.tsx");
