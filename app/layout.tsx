@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import "./globals.css";
@@ -78,6 +79,11 @@ export default function RootLayout({
         >
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ClerkProvider>
+        <Script
+          src="https://rybbit.matthias.lol/api/script.js"
+          data-site-id="956f13b96802"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
