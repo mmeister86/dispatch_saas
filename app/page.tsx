@@ -7,14 +7,7 @@ import {
 } from "@clerk/nextjs";
 import { useAction, useQuery } from "convex/react";
 import { useState } from "react";
-import { Compare3 } from "@/components/compare3";
-import { Faq15 } from "@/components/faq15";
-import { Feature276 } from "@/components/feature276";
-import { Footer24 } from "@/components/footer24";
-import { Hero233 } from "@/components/hero233";
-import { Navbar11 } from "@/components/navbar11";
-import { Pricing7 } from "@/components/pricing7";
-import { Testimonial17 } from "@/components/testimonial17";
+import { LandingPage } from "@/components/landing/landing-page";
 import { api } from "@/convex/_generated/api";
 
 export default function Home() {
@@ -32,18 +25,7 @@ export default function Home() {
 }
 
 function LandingSkeleton({ dashboardHref }: { dashboardHref?: string }) {
-  return (
-    <div className="landing-skeleton-light bg-background text-foreground">
-      <Navbar11 dashboardHref={dashboardHref} />
-      <Hero233 />
-      <Feature276 />
-      <Pricing7 />
-      <Compare3 />
-      <Testimonial17 />
-      <Faq15 />
-      <Footer24 />
-    </div>
-  );
+  return <LandingPage dashboardHref={dashboardHref} />;
 }
 
 function SignedInHome() {

@@ -2,10 +2,23 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ConvexClientProvider } from "@/components/convex-client-provider";
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { Archivo, Commissioner, Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+const archivo = Archivo({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+});
+const commissioner = Commissioner({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-landing-sans",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://usedispat.ch"),
@@ -46,7 +59,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full antialiased", "font-sans", geist.variable)}>
+    <html
+      lang="en"
+      className={cn(
+        "h-full antialiased",
+        "font-sans",
+        geist.variable,
+        archivo.variable,
+        commissioner.variable,
+      )}
+    >
       <body className="min-h-full flex flex-col">
         <ClerkProvider
           signInUrl="/login"

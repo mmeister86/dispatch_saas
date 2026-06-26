@@ -183,11 +183,11 @@ test("billing portal action fetches a fresh Lemon Squeezy subscription managemen
 
 test("home and drafts link to dashboard settings while settings owns repo management", async () => {
   const homeSource = await read("app/page.tsx");
-  const navbarSource = await read("components/navbar11.tsx");
+  const navbarSource = await read("components/landing/landing-nav.tsx");
   const draftsSource = await read("components/drafts-workspace.tsx");
 
   assert.doesNotMatch(homeSource, /router\.replace\("\/dashboard"\)/);
-  assert.match(navbarSource, /url: dashboardHref/);
+  assert.match(navbarSource, /href=\{dashboardHref\}/);
   assert.match(draftsSource, /href="\/dashboard\/settings"/);
   assert.match(draftsSource, /Open settings/);
   assert.doesNotMatch(homeSource, /function GitHubRepoPanel/);
