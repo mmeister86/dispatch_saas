@@ -58,7 +58,7 @@ test("Convex client provider uses Clerk auth hook", async () => {
 
 test("Home page exposes signed-in and signed-out auth states", async () => {
   const source = await read("app/page.tsx");
-  const heroSource = await read("components/hero233.tsx");
+  const heroSource = await read("components/landing/commit-workbench-hero.tsx");
 
   assert.match(source, /Show/);
   assert.match(source, /signed-in/);

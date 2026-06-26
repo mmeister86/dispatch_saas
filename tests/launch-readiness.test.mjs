@@ -12,16 +12,16 @@ async function fileExists(path) {
 
 test("landing footer is shareable and Dispatch-specific", async () => {
   const pageSource = await read("app/page.tsx");
-  const footerSource = await read("components/footer24.tsx");
+  const footerSource = await read("components/landing/landing-footer.tsx");
+  const dataSource = await read("components/landing/landing-data.ts");
+  const combinedSource = `${footerSource}\n${dataSource}`;
 
-  assert.match(pageSource, /<Footer24 \/>/);
+  assert.match(pageSource, /<LandingPage/);
   assert.match(footerSource, /Dispatch/);
   assert.match(footerSource, /Built in public by @matthias_builds/);
   assert.match(footerSource, /https:\/\/x\.com\/matthias_builds/);
-  assert.match(footerSource, /headingClassName/);
-  assert.match(footerSource, /text-left/);
-  assert.match(footerSource, /flex flex-wrap items-center gap-x-5 gap-y-3/);
-  assert.doesNotMatch(footerSource, /lg:grid-cols-9/);
+  assert.match(footerSource, /Turn meaningful commits into posts worth sharing\./);
+
   for (const href of [
     "/",
     "#problem",
@@ -33,8 +33,9 @@ test("landing footer is shareable and Dispatch-specific", async () => {
     "/impressum",
     "/datenschutz",
   ]) {
-    assert.match(footerSource, new RegExp(`href: "${href}"`));
+    assert.match(combinedSource, new RegExp(`href: "${href}"`));
   }
+
   for (const label of [
     "Home",
     "Problem",
@@ -46,34 +47,32 @@ test("landing footer is shareable and Dispatch-specific", async () => {
     "Legal notice",
     "Privacy policy",
   ]) {
-    assert.match(footerSource, new RegExp(`label: "${label}"`));
+    assert.match(combinedSource, new RegExp(`label: "${label}"`));
   }
+
   assert.doesNotMatch(footerSource, /label: "Impressum"/);
   assert.doesNotMatch(footerSource, /label: "Datenschutz"/);
-  assert.doesNotMatch(footerSource, /Shadcnblocks/);
-  assert.doesNotMatch(footerSource, /example@shadcnblocks\.com/);
-  assert.doesNotMatch(footerSource, /\(123\) 456 789/);
+  assert.doesNotMatch(footerSource, /Shadcnblocks|example@shadcnblocks\.com|\(123\) 456 789/);
 });
 
-test("footer links point to landing page sections", async () => {
-  const heroSource = await read("components/hero233.tsx");
-  const featureSource = await read("components/feature276.tsx");
-  const pricingSource = await read("components/pricing7.tsx");
-  const comparisonSource = await read("components/compare3.tsx");
-  const proofSource = await read("components/testimonial17.tsx");
-  const faqSource = await read("components/faq15.tsx");
+test("footer and navbar links point to landing page sections", async () => {
+  const landingSource = await read("components/landing/landing-page.tsx");
+  const navSource = await read("components/landing/landing-nav.tsx");
+  const footerSource = await read("components/landing/landing-footer.tsx");
+  const dataSource = await read("components/landing/landing-data.ts");
+  const combinedSource = `${navSource}\n${footerSource}\n${dataSource}`;
 
-  assert.match(heroSource, /id="home"/);
-  assert.match(featureSource, /id="problem"/);
-  assert.match(featureSource, /id="how-it-works"/);
-  assert.match(pricingSource, /id="pricing"/);
-  assert.match(comparisonSource, /id="comparison"/);
-  assert.match(proofSource, /id="proof"/);
-  assert.match(faqSource, /id="faq"/);
-});
-
-test("navbar mirrors landing section links without legal footer links", async () => {
-  const source = await read("components/navbar11.tsx");
+  for (const id of [
+    "home",
+    "problem",
+    "how-it-works",
+    "pricing",
+    "comparison",
+    "proof",
+    "faq",
+  ]) {
+    assert.match(landingSource, new RegExp(`id="${id}"`));
+  }
 
   for (const href of [
     "/",
@@ -84,23 +83,10 @@ test("navbar mirrors landing section links without legal footer links", async ()
     "#proof",
     "#faq",
   ]) {
-    assert.match(source, new RegExp(`href: "${href}"`));
+    assert.match(combinedSource, new RegExp(`href: "${href}"`));
   }
-  for (const label of [
-    "Home",
-    "Problem",
-    "How it works",
-    "Pricing",
-    "Comparison",
-    "Proof",
-    "FAQ",
-  ]) {
-    assert.match(source, new RegExp(`label: "${label}"`));
-  }
-  assert.doesNotMatch(source, /Legal notice/);
-  assert.doesNotMatch(source, /Privacy policy/);
-  assert.doesNotMatch(source, /\/impressum/);
-  assert.doesNotMatch(source, /\/datenschutz/);
+
+  assert.doesNotMatch(navSource, /Legal notice|Privacy policy|\/impressum|\/datenschutz/);
 });
 
 test("root metadata defines canonical and social preview cards", async () => {
@@ -115,6 +101,8 @@ test("root metadata defines canonical and social preview cards", async () => {
   assert.match(source, /url:\s*"\/og-dispatch\.png"/);
   assert.match(source, /twitter:/);
   assert.match(source, /card:\s*"summary_large_image"/);
+  assert.match(source, /Archivo/);
+  assert.match(source, /Commissioner/);
 
   await fileExists("public/og-dispatch.svg");
   await fileExists("public/og-dispatch.png");

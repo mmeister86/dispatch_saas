@@ -181,15 +181,15 @@ test("legacy drafts and settings routes redirect to dashboard canonical routes",
 
 test("home routes active subscribers into the dashboard instead of old workspaces", async () => {
   const homeSource = await read("app/page.tsx");
-  const navbarSource = await read("components/navbar11.tsx");
+  const navbarSource = await read("components/landing/landing-nav.tsx");
 
   assert.doesNotMatch(homeSource, /useRouter/);
   assert.doesNotMatch(homeSource, /router\.replace\("\/dashboard"\)/);
   assert.match(homeSource, /access\.state === "active"/);
   assert.match(homeSource, /<LandingSkeleton dashboardHref="\/dashboard" \/>/);
   assert.match(navbarSource, /dashboardHref\?: string/);
-  assert.match(navbarSource, /label: "Dashboard"/);
-  assert.match(navbarSource, /url: dashboardHref/);
+  assert.match(navbarSource, /href=\{dashboardHref\}/);
+  assert.match(navbarSource, />Dashboard</);
   assert.doesNotMatch(homeSource, /Commit-to-post workspace/);
   assert.doesNotMatch(homeSource, /href="\/drafts"/);
   assert.doesNotMatch(homeSource, /href="\/settings"/);

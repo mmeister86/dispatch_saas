@@ -56,11 +56,12 @@ test("/dashboard/drafts route renders the routed drafts workspace", async () => 
 
 test("home links to the dashboard instead of embedding the draft editor", async () => {
   const source = await read("app/page.tsx");
-  const navbarSource = await read("components/navbar11.tsx");
+  const navbarSource = await read("components/landing/landing-nav.tsx");
 
   assert.doesNotMatch(source, /router\.replace\("\/dashboard"\)/);
   assert.match(source, /dashboardHref="\/dashboard"/);
-  assert.match(navbarSource, /label: "Dashboard"/);
+  assert.match(navbarSource, /href=\{dashboardHref\}/);
+  assert.match(navbarSource, />Dashboard</);
   assert.doesNotMatch(source, /api\.drafts\.listForReview/);
   assert.doesNotMatch(source, /function DraftReviewPanel/);
   assert.doesNotMatch(source, /function DraftDetailModal/);
